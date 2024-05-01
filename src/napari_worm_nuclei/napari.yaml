@@ -4,7 +4,7 @@ contributions:
   commands:
     - id: napari-worm-nuclei.data_reader
       python_name: napari_worm_nuclei._widget:DataReader
-      title: Annotator
+      title: Data Reader
     #- id: napari-annotator.make_magic_widget
     #  python_name: napari_annotator._widget:example_magic_widget
     #  title: Make example magic widget
