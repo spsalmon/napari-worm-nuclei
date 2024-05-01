@@ -178,7 +178,7 @@ class DataReader(QWidget):
         if current_index < self.point_combo.count() - 1:
             self.point_combo.setCurrentIndex(current_index + 1)
 
-def load_images(self):
+    def load_images(self):
         time = int(self.time_combo.currentText())
         point = int(self.point_combo.currentText())
         print("Loading images for time:", time, "and point:", point)
