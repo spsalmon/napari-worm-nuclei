@@ -21,10 +21,6 @@ class DataReader(Container):
 
         self.mask_dir = create_widget(annotation=os.PathLike, label="Mask directory")
         self.mask_dir.changed.connect(self._on_mask_dir_change)
-        
-        self.layout.addWidget(self.img_dir)
-        self.layout.addWidget(self.mask_dir)
-        self.setLayout(self.layout)
 
     def _on_img_dir_change(self, event):
         print(self.img_dir.value)
