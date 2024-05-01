@@ -37,6 +37,9 @@ class DataReader(QWidget):
         # Set up the layout
         layout = QVBoxLayout()
 
+        self.img_dir_path = ""
+        self.mask_dir_path = ""
+
         # Create widgets for image directory selection
         self.img_dir_edit = QLineEdit()  # To display the path
         self.img_dir_button = QPushButton("Select Image Directory")
@@ -58,13 +61,14 @@ class DataReader(QWidget):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Image Directory")
         if dir_path:
             self.img_dir_edit.setText(dir_path)
-            self.viewer.open(dir_path, name='Images')
+            self.img_dir_path = dir_path
 
     def select_mask_dir(self):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Mask Directory")
         if dir_path:
             self.mask_dir_edit.setText(dir_path)
-            self.viewer.open(dir_path, name='Masks')
+            self.mask_dir_path = dir_path
+
 
 
 
