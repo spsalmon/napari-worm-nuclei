@@ -2,10 +2,23 @@ from typing import TYPE_CHECKING
 
 from magicgui.widgets import Container, create_widget
 from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton
+from towbintools.foundation import file_handling
 import os
 
 if TYPE_CHECKING:
     import napari
+
+def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
+    subdir_filemap = file_handling.get_dir_filemap(dir_path)
+    subdir_filemap.rename(columns={"ImagePath": subdir_name}, inplace=True)
+    # check if column already exists
+    if subdir_name in experiment_filemap.columns:
+        experiment_filemap.drop(columns=[subdir_name], inplace=True)
+    experiment_filemap = experiment_filemap.merge(
+        subdir_filemap, on=["Time", "Point"], how="left"
+    )
+    experiment_filemap = experiment_filemap.replace(np.nan, "", regex=True)
+    return experiment_filemap
 
 
 # if we want even more control over our widget, we can use
@@ -78,6 +91,11 @@ class DataReader(QWidget):
         print("Getting files from the selected directories")
         print("Image directory:", self.img_dir_path)
         print("Mask directory:", self.mask_dir_path)
+
+        filemap = file_handling.get_dir_filemap(self.img_dir_path)
+        filemap = add_dir_to_experiment_filemap(filemap, self.mask_dir_path, "MaskPath")
+
+        print(filemap.head())
 
 
 
