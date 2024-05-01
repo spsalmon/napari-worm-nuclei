@@ -36,18 +36,21 @@ class DataReader(QWidget):
         self.img_dir = QFileDialog()
         self.mask_dir = QFileDialog()
 
-        self.img_dir.textChanged.connect(self._on_img_dir_change)
-        self.mask_dir.textChanged.connect(self._on_mask_dir_change)
+        self.img_dir.setFileMode(QFileDialog.Directory)
+        self.mask_dir.setFileMode(QFileDialog.Directory)
+
+        self.img_dir.fileSelected.connect(self._on_img_dir_change)
+        self.mask_dir.fileSelected.connect(self._on_mask_dir_change)
 
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.img_dir)
         self.layout().addWidget(self.mask_dir)
 
     def _on_img_dir_change(self, event):
-        print(self.img_dir.text())
+        print(self.img_dir.directory())
 
     def _on_mask_dir_change(self, event):
-        print(self.mask_dir.text())
+        print(self.mask_dir.directory())
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
