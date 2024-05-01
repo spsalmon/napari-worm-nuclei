@@ -74,6 +74,31 @@ class DataReader(QWidget):
         layout.addWidget(self.get_files_button)
         self.get_files_button.clicked.connect(self.get_files)
 
+        # Add a time and point selection widget
+        self.previous_time_button = QPushButton("Previous Time")
+        self.time_combo = create_widget(annotation=int, label="Time")
+        self.next_time_button = QPushButton("Next Time")
+
+        self.previous_point_button = QPushButton("Previous Point")
+        self.point_combo = create_widget(annotation=int, label="Point")
+        self.next_point_button = QPushButton("Next Point")
+
+        # Put the time widgets in a horizontal layout
+        time_layout = QVBoxLayout()
+        time_layout.addWidget(self.previous_time_button)
+        time_layout.addWidget(self.time_combo)
+        time_layout.addWidget(self.next_time_button)
+
+        # Put the point widgets in a horizontal layout
+        point_layout = QVBoxLayout()
+        point_layout.addWidget(self.previous_point_button)
+        point_layout.addWidget(self.point_combo)
+        point_layout.addWidget(self.next_point_button)
+
+        # Add the time and point layouts to the main layout
+        layout.addLayout(time_layout)
+        layout.addLayout(point_layout)
+
         # Set the layout to the QWidget
         self.setLayout(layout)
 
@@ -99,6 +124,10 @@ class DataReader(QWidget):
 
         # Remove all rows with NaN values
         filemap = filemap.dropna()
+
+        # Remove all rows with empty strings
+        filemap = filemap[(filemap != "").all(axis=1)]
+
         print(filemap.head())
 
 
