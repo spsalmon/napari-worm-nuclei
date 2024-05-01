@@ -5,6 +5,7 @@ from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushBu
 from towbintools.foundation import file_handling
 import os
 import numpy as np
+import pandas as pd
 
 if TYPE_CHECKING:
     import napari
@@ -96,7 +97,11 @@ class DataReader(QWidget):
         filemap = file_handling.get_dir_filemap(self.img_dir_path)
         filemap = add_dir_to_experiment_filemap(filemap, self.mask_dir_path, "MaskPath")
 
+        # Remove all rows with NaN values
+        filemap = filemap.dropna()
         print(filemap.head())
+
+
 
 
 
