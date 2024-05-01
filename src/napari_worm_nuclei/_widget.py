@@ -6,7 +6,7 @@ from towbintools.foundation import file_handling
 import os
 import numpy as np
 import pandas as pd
-
+import tifffile
 
 if TYPE_CHECKING:
     import napari
@@ -55,6 +55,7 @@ class DataReader(QWidget):
 
         self.img_dir_path = ""
         self.mask_dir_path = ""
+        self.filemap = pd.DataFrame()
 
         # Create widgets for image directory selection
         self.img_dir_edit = QLineEdit()  # To display the path
@@ -80,9 +81,15 @@ class DataReader(QWidget):
         self.time_combo = QComboBox()
         self.next_time_button = QPushButton("Next Time")
 
+        self.previous_time_button.clicked.connect(self.previous_time)
+        self.next_time_button.clicked.connect(self.next_time)
+
         self.previous_point_button = QPushButton("Previous Point")
         self.point_combo = QComboBox()
         self.next_point_button = QPushButton("Next Point")
+
+        self.previous_point_button.clicked.connect(self.previous_point)
+        self.next_point_button.clicked.connect(self.next_point)
 
         # Put the time widgets in a horizontal layout
         time_layout = QHBoxLayout()
@@ -99,6 +106,11 @@ class DataReader(QWidget):
         # Add the time and point layouts to the main layout
         layout.addLayout(time_layout)
         layout.addLayout(point_layout)
+
+        # Add a button to load the selected image and mask
+        self.load_button = QPushButton("Load Images")
+        layout.addWidget(self.load_button)
+        self.load_button.clicked.connect(self.load_images)
 
         # Set the layout to the QWidget
         self.setLayout(layout)
@@ -129,7 +141,11 @@ class DataReader(QWidget):
         # Remove all rows with empty strings
         filemap = filemap[(filemap != "").all(axis=1)]
 
-        print(filemap.head())
+        self.filemap = filemap
+
+        # Reset the combo boxes
+        self.time_combo.clear()
+        self.point_combo.clear()
 
         # Populate the time and point combo boxes
         time_values = [str(time) for time in filemap["Time"].unique()]
@@ -137,6 +153,50 @@ class DataReader(QWidget):
 
         point_values = [str(point) for point in filemap["Point"].unique()]
         self.point_combo.addItems(point_values)
+
+    def previous_time(self):
+        # select the previous element in the time combo box
+        current_index = self.time_combo.currentIndex()
+        if current_index > 0:
+            self.time_combo.setCurrentIndex(current_index - 1)
+    
+    def next_time(self):
+        # select the next element in the time combo box
+        current_index = self.time_combo.currentIndex()
+        if current_index < self.time_combo.count() - 1:
+            self.time_combo.setCurrentIndex(current_index + 1)
+    
+    def previous_point(self):
+        # select the previous element in the point combo box
+        current_index = self.point_combo.currentIndex()
+        if current_index > 0:
+            self.point_combo.setCurrentIndex(current_index - 1)
+    
+    def next_point(self):
+        # select the next element in the point combo box
+        current_index = self.point_combo.currentIndex()
+        if current_index < self.point_combo.count() - 1:
+            self.point_combo.setCurrentIndex(current_index + 1)
+
+def load_images(self):
+        time = int(self.time_combo.currentText())
+        point = int(self.point_combo.currentText())
+        print("Loading images for time:", time, "and point:", point)
+        
+        row = self.filemap[(self.filemap["Time"] == time) & (self.filemap["Point"] == point)]
+        img_path = row["ImagePath"].values[0]
+        mask_path = row["MaskPath"].values[0]
+
+        # Read images using tifffile
+        img_data = tifffile.imread(img_path)
+        mask_data = tifffile.imread(mask_path)
+
+        # Add images to Napari viewer
+        self.viewer.add_image(img_data, name=f"Image at time {time} point {point}")
+        self.viewer.add_labels(mask_data, name=f"Mask at time {time} point {point}")
+
+
+
 
 
 
