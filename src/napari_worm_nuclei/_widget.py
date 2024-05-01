@@ -1,11 +1,12 @@
 from typing import TYPE_CHECKING
 
 from magicgui.widgets import Container, create_widget
-from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton, QComboBox
+from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton, QComboBox
 from towbintools.foundation import file_handling
 import os
 import numpy as np
 import pandas as pd
+
 
 if TYPE_CHECKING:
     import napari
@@ -84,13 +85,13 @@ class DataReader(QWidget):
         self.next_point_button = QPushButton("Next Point")
 
         # Put the time widgets in a horizontal layout
-        time_layout = QVBoxLayout()
+        time_layout = QHBoxLayout()
         time_layout.addWidget(self.previous_time_button)
         time_layout.addWidget(self.time_combo)
         time_layout.addWidget(self.next_time_button)
 
         # Put the point widgets in a horizontal layout
-        point_layout = QVBoxLayout()
+        point_layout = QHBoxLayout()
         point_layout.addWidget(self.previous_point_button)
         point_layout.addWidget(self.point_combo)
         point_layout.addWidget(self.next_point_button)
@@ -129,6 +130,13 @@ class DataReader(QWidget):
         filemap = filemap[(filemap != "").all(axis=1)]
 
         print(filemap.head())
+
+        # Populate the time and point combo boxes
+        time_values = filemap["Time"].unique()
+        self.time_combo.addItems(time_values)
+
+        point_values = filemap["Point"].unique()
+        self.point_combo.addItems(point_values)
 
 
 
