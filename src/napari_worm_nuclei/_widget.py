@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from magicgui.widgets import Container, create_widget
-from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton
+from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton, QComboBox
 from towbintools.foundation import file_handling
 import os
 import numpy as np
@@ -76,11 +76,11 @@ class DataReader(QWidget):
 
         # Add a time and point selection widget
         self.previous_time_button = QPushButton("Previous Time")
-        self.time_combo = create_widget(annotation=int, label="Time")
+        self.time_combo = QComboBox()
         self.next_time_button = QPushButton("Next Time")
 
         self.previous_point_button = QPushButton("Previous Point")
-        self.point_combo = create_widget(annotation=int, label="Point")
+        self.point_combo = QComboBox()
         self.next_point_button = QPushButton("Next Point")
 
         # Put the time widgets in a horizontal layout
