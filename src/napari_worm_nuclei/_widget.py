@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from magicgui.widgets import Container, create_widget
-from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget
+from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton
 import os
 
 if TYPE_CHECKING:
@@ -28,29 +28,45 @@ if TYPE_CHECKING:
 #     def _on_mask_dir_change(self, event):
 #         print(self.mask_dir.value)
 
+
 class DataReader(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
         super().__init__()
         self.viewer = viewer
 
-        self.img_dir = QFileDialog()
-        self.mask_dir = QFileDialog()
+        # Set up the layout
+        layout = QVBoxLayout()
 
-        self.img_dir.setFileMode(QFileDialog.Directory)
-        self.mask_dir.setFileMode(QFileDialog.Directory)
+        # Create widgets for image directory selection
+        self.img_dir_edit = QLineEdit()  # To display the path
+        self.img_dir_button = QPushButton("Select Image Directory")
+        self.img_dir_button.clicked.connect(self.select_img_dir)
+        layout.addWidget(self.img_dir_edit)
+        layout.addWidget(self.img_dir_button)
 
-        self.img_dir.fileSelected.connect(self._on_img_dir_change)
-        self.mask_dir.fileSelected.connect(self._on_mask_dir_change)
+        # Create widgets for mask directory selection
+        self.mask_dir_edit = QLineEdit()  # To display the path
+        self.mask_dir_button = QPushButton("Select Mask Directory")
+        self.mask_dir_button.clicked.connect(self.select_mask_dir)
+        layout.addWidget(self.mask_dir_edit)
+        layout.addWidget(self.mask_dir_button)
 
-        self.setLayout(QVBoxLayout())
-        self.layout().addWidget(self.img_dir)
-        self.layout().addWidget(self.mask_dir)
+        # Set the layout to the QWidget
+        self.setLayout(layout)
 
-    def _on_img_dir_change(self, event):
-        print(self.img_dir.directory())
+    def select_img_dir(self):
+        dir_path = QFileDialog.getExistingDirectory(self, "Select Image Directory")
+        if dir_path:
+            self.img_dir_edit.setText(dir_path)
+            self.viewer.open(dir_path, name='Images')
 
-    def _on_mask_dir_change(self, event):
-        print(self.mask_dir.directory())
+    def select_mask_dir(self):
+        dir_path = QFileDialog.getExistingDirectory(self, "Select Mask Directory")
+        if dir_path:
+            self.mask_dir_edit.setText(dir_path)
+            self.viewer.open(dir_path, name='Masks')
+
+
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
