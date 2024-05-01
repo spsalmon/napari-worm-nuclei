@@ -54,6 +54,11 @@ class DataReader(QWidget):
         layout.addWidget(self.mask_dir_edit)
         layout.addWidget(self.mask_dir_button)
 
+        # Add a button to get the files from the selected directories
+        self.get_files_button = QPushButton("Get Files")
+        layout.addWidget(self.get_files_button)
+        self.get_files_button.clicked.connect(self.get_files)
+
         # Set the layout to the QWidget
         self.setLayout(layout)
 
@@ -68,6 +73,11 @@ class DataReader(QWidget):
         if dir_path:
             self.mask_dir_edit.setText(dir_path)
             self.mask_dir_path = dir_path
+
+    def get_files(self):
+        print("Getting files from the selected directories")
+        print("Image directory:", self.img_dir_path)
+        print("Mask directory:", self.mask_dir_path)
 
 
 
