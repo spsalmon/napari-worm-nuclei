@@ -4,6 +4,7 @@ from magicgui.widgets import Container, create_widget
 from qtpy.QtWidgets import QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton
 from towbintools.foundation import file_handling
 import os
+import numpy as np
 
 if TYPE_CHECKING:
     import napari
