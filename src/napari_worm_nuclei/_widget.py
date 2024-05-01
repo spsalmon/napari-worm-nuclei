@@ -132,10 +132,10 @@ class DataReader(QWidget):
         print(filemap.head())
 
         # Populate the time and point combo boxes
-        time_values = filemap["Time"].unique()
+        time_values = [str(time) for time in filemap["Time"].unique()]
         self.time_combo.addItems(time_values)
 
-        point_values = filemap["Point"].unique()
+        point_values = [str(point) for point in filemap["Point"].unique()]
         self.point_combo.addItems(point_values)
 
 
