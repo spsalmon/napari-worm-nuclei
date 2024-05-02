@@ -53,7 +53,7 @@ class DataReader(QWidget):
 
     def setup_ui(self):
         self.layout = QVBoxLayout()
-        self.layout.setSpacing(10)  # Reduced spacing between widgets
+        self.layout.setSpacing(1)  # Reduced spacing between widgets
         self.setup_directory_selection()
         self.setup_file_controls()
         self.setup_navigation_controls()
@@ -164,6 +164,11 @@ class DataReader(QWidget):
         # Add images to Napari viewer
         self.viewer.add_image(img_data, name=f"Image at time {time} point {point}")
         self.viewer.add_labels(mask_data, name=f"Mask at time {time} point {point}")
+
+        # Set the label layer opacity to 0.5
+        self.viewer.layers[-1].opacity = 0.5
+        # Auto adjust the contrast limits of the image layer
+        self.viewer.layers[-2].contrast_limits = (img_data.min(), img_data.max())
 
 
 # class ExampleQWidget(QWidget):
