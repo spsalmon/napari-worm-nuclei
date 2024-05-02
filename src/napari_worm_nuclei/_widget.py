@@ -178,10 +178,10 @@ class AnnotationTool(QWidget):
         self.viewer = viewer
         self.selected_class = 'epidermis'  # Default class
         self.class_colors = {
-            'epidermis': np.array([1, 0, 0, 1]),  # Red
-            'intestine': np.array([0, 0, 1, 1]),  # Blue
-            'other': np.array([1, 1, 0, 1]),  # Yellow
-            'error': np.array([1, 0.5, 0.5, 1])  # Coral Pink
+            'epidermis': (1, 0, 0, 1),  # Red
+            'intestine': (0, 0, 1, 1),  # Blue
+            'other': (1, 1, 0, 1),  # Yellow
+            'error': (1, 0.5, 0.5, 1)  # Coral Pink
         }
         self.class_values = {
             'epidermis': 1,
@@ -240,7 +240,7 @@ class AnnotationTool(QWidget):
         if 'Annotations' not in [layer.name for layer in self.viewer.layers]:
             initial_data = np.zeros((0, 3)) if z_dim else np.zeros((0, 2))  # Use ternary operator to set initial_data size
             self.points_layer = self.viewer.add_points(initial_data, name='Annotations',
-                                                    face_color=self.class_colors[self.selected_class],
+                                                    face_color=np.array(self.class_colors[self.selected_class]),
                                                     ndim=3 if z_dim else 2)
             print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
         else:
