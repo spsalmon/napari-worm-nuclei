@@ -213,11 +213,11 @@ class AnnotationTool(QWidget):
             if cls == 'epidermis':
                 btn.setChecked(True)  # Set default selected class
 
+        layout.addLayout(class_layout)
+
         self.convert_labels_button = QPushButton("Convert Labels")
         self.convert_labels_button.clicked.connect(self.convert_labels)
         layout.addWidget(self.convert_labels_button)
-
-        layout.addLayout(class_layout)
 
     def on_class_selected(self, checked):
         radio_button = self.sender()
