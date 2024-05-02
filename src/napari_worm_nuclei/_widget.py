@@ -201,7 +201,7 @@ class AnnotationTool(QWidget):
             btn.toggled.connect(self.on_class_selected)
             self.class_buttons.addButton(btn)
             class_layout.addWidget(btn)
-            if cls == '1':
+            if cls == 'epidermis':
                 btn.setChecked(True)  # Set default selected class
 
         layout.addLayout(class_layout)
@@ -212,20 +212,36 @@ class AnnotationTool(QWidget):
             self.selected_class = radio_button.text()
             self.update_point_tool_color()
 
+
     def prepare_annotation_layer(self):
+        # Check for the last label layer and its dimensions
+        label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
+        if label_layers:
+            last_label_layer = label_layers[-1]
+            z_dim = last_label_layer.data.shape[0] if last_label_layer.ndim == 3 else None
+        else:
+            z_dim = None
+            print("No label layers found, defaulting to standard dimensions.")
+
         # Creates a new point layer or retrieves an existing one
         if 'Annotations' not in [layer.name for layer in self.viewer.layers]:
-            self.points_layer = self.viewer.add_points(name='Annotations', face_color=self.class_colors[self.selected_class])
-            print("Annotation layer added.")
+            initial_data = np.zeros((0, 3)) if z_dim else np.zeros((0, 2))  # Use ternary operator to set initial_data size
+            self.points_layer = self.viewer.add_points(initial_data, name='Annotations',
+                                                    face_color=self.class_colors[self.selected_class],
+                                                    ndim=3 if z_dim else 2)
+            print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
         else:
             self.points_layer = self.viewer.layers['Annotations']
             print("Using existing annotation layer.")
+
         self.update_point_tool_color()
 
     def update_point_tool_color(self):
         if hasattr(self, 'points_layer'):
+            # Deselect all points
+            self.points_layer.selected_data = []
+            # Set the current face color to the selected class color
             self.points_layer.current_face_color = self.class_colors[self.selected_class]
-            self.viewer.tools.active_tool = 'add_points'  # Automatically select the "Add Points" tool in napari
             print(f"Ready to add points with color {self.class_colors[self.selected_class]} for class {self.selected_class}.")
 
 # class ExampleQWidget(QWidget):
