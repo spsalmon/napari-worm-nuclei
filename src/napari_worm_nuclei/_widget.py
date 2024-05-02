@@ -1,7 +1,8 @@
 from typing import TYPE_CHECKING
 
 from magicgui.widgets import Container, create_widget
-from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton, QComboBox, QColor, QRadioButton, QButtonGroup
+from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton, QComboBox, QRadioButton, QButtonGroup
+from qtpy.QtGui import QColor
 from towbintools.foundation import file_handling
 import os
 import numpy as np
@@ -188,6 +189,10 @@ class AnnotationTool(QWidget):
     def setup_ui(self):
         layout = QVBoxLayout(self)
 
+        self.start_annotating_button = QPushButton("Start Annotating")
+        self.start_annotating_button.clicked.connect(self.start_annotating)
+        layout.addWidget(self.start_annotating_button)
+
         # Setup radio buttons for class selection
         self.class_buttons = QButtonGroup(self)  # Using a button group to manage radio buttons
         class_layout = QHBoxLayout()
@@ -200,10 +205,6 @@ class AnnotationTool(QWidget):
                 btn.setChecked(True)  # Set default selected class
 
         layout.addLayout(class_layout)
-
-        self.start_annotating_button = QPushButton("Start Annotating")
-        self.start_annotating_button.clicked.connect(self.start_annotating)
-        layout.addWidget(self.start_annotating_button)
 
     def on_class_selected(self):
         radio_button = self.sender()
