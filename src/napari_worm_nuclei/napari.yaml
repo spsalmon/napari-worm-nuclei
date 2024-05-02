@@ -6,7 +6,7 @@ contributions:
       python_name: napari_worm_nuclei._widget:DataReader
       title: Data Reader
     - id: napari-worm-nuclei.annotation_tool
-      python_name: napari_annotator._widget:AnnotationTool
+      python_name: napari_worm_nuclei._widget:AnnotationTool
       title: Annotation Tool
     #- id: napari-annotator.make_func_widget
     #  python_name: napari_annotator._widget:example_function_widget
