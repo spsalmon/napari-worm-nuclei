@@ -183,6 +183,12 @@ class AnnotationTool(QWidget):
             'other': 'green',
             'error': 'yellow'
         }
+        self.class_values = {
+            'red': 1,
+            'blue': 2,
+            'green': 3,
+            'yellow': 4
+        }
         self.setup_ui()
 
     def setup_ui(self):
