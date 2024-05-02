@@ -53,6 +53,7 @@ class DataReader(QWidget):
 
     def setup_ui(self):
         self.layout = QVBoxLayout()
+        self.layout.setSpacing(10)  # Reduced spacing between widgets
         self.setup_directory_selection()
         self.setup_file_controls()
         self.setup_navigation_controls()
@@ -155,9 +156,10 @@ class DataReader(QWidget):
         # Read images using tifffile
         img_data = tifffile.imread(img_path)
         mask_data = tifffile.imread(mask_path)
-        # add a dimension to the mask data if img_data has 4 dimensions
+
+        # If the image is 4D, swap the first and second axes
         if img_data.ndim == 4:
-            mask_data = np.expand_dims(mask_data, axis=0)
+            img_data = np.swapaxes(img_data, 0, 1)
 
         # Add images to Napari viewer
         self.viewer.add_image(img_data, name=f"Image at time {time} point {point}")
