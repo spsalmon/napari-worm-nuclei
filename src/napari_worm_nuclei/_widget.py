@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import tifffile
 import napari
+from scipy.ndimage import find_objects
 
 def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
     subdir_filemap = file_handling.get_dir_filemap(dir_path)
