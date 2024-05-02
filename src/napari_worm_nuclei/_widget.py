@@ -190,7 +190,7 @@ class AnnotationTool(QWidget):
         layout = QVBoxLayout(self)
 
         self.start_annotating_button = QPushButton("Start Annotating")
-        self.start_annotating_button.clicked.connect(self.start_annotating)
+        self.start_annotating_button.clicked.connect(self.prepare_annotation_layer)
         layout.addWidget(self.start_annotating_button)
 
         # Setup radio buttons for class selection
@@ -206,31 +206,27 @@ class AnnotationTool(QWidget):
 
         layout.addLayout(class_layout)
 
-    def on_class_selected(self):
+    def on_class_selected(self, checked):
         radio_button = self.sender()
-        if radio_button.isChecked():
+        if checked:
             self.selected_class = radio_button.text()
+            self.update_point_tool_color()
 
-    def start_annotating(self):
+    def prepare_annotation_layer(self):
         # Creates a new point layer or retrieves an existing one
         if 'Annotations' not in [layer.name for layer in self.viewer.layers]:
-            self.points_layer = self.viewer.add_points(name='Annotations')
+            self.points_layer = self.viewer.add_points(name='Annotations', face_color=self.class_colors[self.selected_class])
             print("Annotation layer added.")
         else:
             self.points_layer = self.viewer.layers['Annotations']
             print("Using existing annotation layer.")
+        self.update_point_tool_color()
 
-        # Set the point layer to add points in the color of the selected class
-        self.points_layer.current_face_color = self.class_colors[self.selected_class].name()
-
-        # Listen for point additions on the viewer
-        self.viewer.mouse_drag_callbacks.append(self.add_point)
-
-    def add_point(self, layer, event):
-        # This function adds a point where the user clicks
-        coord = self.viewer.cursor.position
-        self.points_layer.data = np.append(self.points_layer.data, [coord], axis=0)
-        print(f"Added point at {coord} for class {self.selected_class}.")
+    def update_point_tool_color(self):
+        if hasattr(self, 'points_layer'):
+            self.points_layer.current_face_color = self.class_colors[self.selected_class]
+            self.viewer.tools.active_tool = 'add_points'  # Automatically select the "Add Points" tool in napari
+            print(f"Ready to add points with color {self.class_colors[self.selected_class]} for class {self.selected_class}.")
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
