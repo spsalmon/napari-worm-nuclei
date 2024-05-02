@@ -178,17 +178,21 @@ class AnnotationTool(QWidget):
         self.viewer = viewer
         self.selected_class = 'epidermis'  # Default class
         self.class_colors = {
-            'epidermis': 'red',
-            'intestine': 'blue',
-            'other': 'green',
-            'error': 'yellow'
+            'epidermis': (1, 0, 0, 1),  # Red
+            'intestine': (0, 0, 1, 1),  # Blue
+            'other': (1, 1, 0, 1),  # Yellow
+            'error': (1, 0.5, 0.5, 1)  # Coral Pink
         }
         self.class_values = {
-            'red': 1,
-            'blue': 2,
-            'green': 3,
-            'yellow': 4
+            'epidermis': 1,
+            'intestine': 2,
+            'other': 3,
+            'error': 4
         }
+
+        # Map colors to class values using tuples as keys
+        self.color_to_class = {self.class_colors[cls]: self.class_values[cls] for cls in self.class_colors}
+
         self.setup_ui()
 
     def setup_ui(self):
@@ -267,11 +271,8 @@ class AnnotationTool(QWidget):
         # Create an empty label layer with the same shape and dimensions
         new_labels = np.zeros_like(base_label_layer.data)
 
-        print(f'Points layer data: {self.points_layer.data}')
-        print(f'Points layer face color: {self.points_layer.face_color}')
         # Map points to labels based on their color
         for point, color in zip(self.points_layer.data, self.points_layer.face_color):
-            print(color)
             # Convert float coordinates to integer indices
             indices = tuple(int(p) for p in point)
             # Check if the indices are within the valid range of the label layer
@@ -282,7 +283,7 @@ class AnnotationTool(QWidget):
                     # Copy the labeled region to new_labels, changing the label
                     new_labels[object_slices] = np.where(
                         base_label_layer.data[object_slices] == label_value,
-                        self.class_values[color],
+                        self.color_to_class[tuple(color)],
                         new_labels[object_slices]
                     )
 
