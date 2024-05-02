@@ -178,10 +178,10 @@ class AnnotationTool(QWidget):
         self.viewer = viewer
         self.selected_class = 'epidermis'  # Default class
         self.class_colors = {
-            'epidermis': (1, 0, 0, 1),  # Red
-            'intestine': (0, 0, 1, 1),  # Blue
-            'other': (1, 1, 0, 1),  # Yellow
-            'error': (1, 0.5, 0.5, 1)  # Coral Pink
+            'epidermis': np.array([1, 0, 0, 1]),  # Red
+            'intestine': np.array([0, 0, 1, 1]),  # Blue
+            'other': np.array([1, 1, 0, 1]),  # Yellow
+            'error': np.array([1, 0.5, 0.5, 1])  # Coral Pink
         }
         self.class_values = {
             'epidermis': 1,
