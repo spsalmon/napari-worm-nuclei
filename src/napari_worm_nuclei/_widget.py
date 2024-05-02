@@ -129,35 +129,25 @@ class DataReader(QWidget):
         else:
             print("Please select both image and mask directories.")
 
-    # def previous_time(self):
-    #     # select the previous element in the time combo box
-    #     current_index = self.time_combo.currentIndex()
-    #     if current_index > 0:
-    #         self.time_combo.setCurrentIndex(current_index - 1)
-    
-    # def next_time(self):
-    #     # select the next element in the time combo box
-    #     current_index = self.time_combo.currentIndex()
-    #     if current_index < self.time_combo.count() - 1:
-    #         self.time_combo.setCurrentIndex(current_index + 1)
-    
-    # def previous_point(self):
-    #     # select the previous element in the point combo box
-    #     current_index = self.point_combo.currentIndex()
-    #     if current_index > 0:
-    #         self.point_combo.setCurrentIndex(current_index - 1)
-    
-    # def next_point(self):
-    #     # select the next element in the point combo box
-    #     current_index = self.point_combo.currentIndex()
-    #     if current_index < self.point_combo.count() - 1:
-    #         self.point_combo.setCurrentIndex(current_index + 1)
+    def load_file_map(self, img_dir, mask_dir):
+        filemap = file_handling.get_dir_filemap(img_dir)
+        filemap = add_dir_to_experiment_filemap(filemap, mask_dir, "MaskPath")
+        # Remove all rows with NaN values
+        filemap = filemap.dropna()
+        # Remove all rows with empty strings
+        filemap = filemap[(filemap != "").all(axis=1)]
+        self.filemap = filemap
+
+    def populate_combos(self):
+        self.time_combo.clear()
+        self.time_combo.addItems(self.filemap["Time"].unique().astype(str))
+        self.point_combo.clear()
+        self.point_combo.addItems(self.filemap["Point"].unique().astype(str))
 
     def load_images(self):
         time = int(self.time_combo.currentText())
         point = int(self.point_combo.currentText())
-        print("Loading images for time:", time, "and point:", point)
-        
+
         row = self.filemap[(self.filemap["Time"] == time) & (self.filemap["Point"] == point)]
         img_path = row["ImagePath"].values[0]
         mask_path = row["MaskPath"].values[0]
