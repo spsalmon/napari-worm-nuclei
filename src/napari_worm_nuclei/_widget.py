@@ -267,6 +267,8 @@ class AnnotationTool(QWidget):
         # Create an empty label layer with the same shape and dimensions
         new_labels = np.zeros_like(base_label_layer.data)
 
+        print(f'Points layer data: {self.points_layer.data}')
+        print(f'Points layer face color: {self.points_layer.face_color}')
         # Map points to labels based on their color
         for point, color in zip(self.points_layer.data, self.points_layer.face_color):
             print(color)
