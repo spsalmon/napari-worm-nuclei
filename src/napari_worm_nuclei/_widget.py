@@ -269,6 +269,7 @@ class AnnotationTool(QWidget):
 
         # Map points to labels based on their color
         for point, color in zip(self.points_layer.data, self.points_layer.face_color):
+            print(color)
             # Convert float coordinates to integer indices
             indices = tuple(int(p) for p in point)
             # Check if the indices are within the valid range of the label layer
