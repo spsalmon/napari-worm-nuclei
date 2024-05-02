@@ -179,10 +179,10 @@ class AnnotationTool(QWidget):
         self.viewer = viewer
         self.selected_class = 'epidermis'  # Default class
         self.class_colors = {
-            'epidermis': QColor('red'),
-            'intestine': QColor('blue'),
-            'other': QColor('green'),
-            'error': QColor('yellow')
+            'epidermis': 'red',
+            'intestine': 'blue',
+            'other': 'green',
+            'error': 'yellow'
         }
         self.setup_ui()
 
