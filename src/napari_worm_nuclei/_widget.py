@@ -8,9 +8,7 @@ import os
 import numpy as np
 import pandas as pd
 import tifffile
-
-if TYPE_CHECKING:
-    import napari
+import napari
 
 def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
     subdir_filemap = file_handling.get_dir_filemap(dir_path)
