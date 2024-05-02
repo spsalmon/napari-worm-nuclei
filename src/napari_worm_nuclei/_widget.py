@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from magicgui.widgets import Container, create_widget
-from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton, QComboBox
+from qtpy.QtWidgets import QHBoxLayout, QVBoxLayout, QFileDialog, QWidget, QLineEdit, QPushButton, QComboBox, QColor, QRadioButton, QButtonGroup
 from towbintools.foundation import file_handling
 import os
 import numpy as np
@@ -176,24 +176,60 @@ class AnnotationTool(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
         super().__init__()
         self.viewer = viewer
-        self.layout = QVBoxLayout(self)
+        self.selected_class = 'epidermis'  # Default class
+        self.class_colors = {
+            'epidermis': QColor('red'),
+            'intestine': QColor('blue'),
+            'other': QColor('green'),
+            'error': QColor('yellow')
+        }
         self.setup_ui()
 
-        self.annotation_layer = None
-
     def setup_ui(self):
+        layout = QVBoxLayout(self)
+
+        # Setup radio buttons for class selection
+        self.class_buttons = QButtonGroup(self)  # Using a button group to manage radio buttons
+        class_layout = QHBoxLayout()
+        for cls in ['epidermis', 'intestine', 'other', 'error']:
+            btn = QRadioButton(cls)
+            btn.toggled.connect(self.on_class_selected)
+            self.class_buttons.addButton(btn)
+            class_layout.addWidget(btn)
+            if cls == '1':
+                btn.setChecked(True)  # Set default selected class
+
+        layout.addLayout(class_layout)
+
         self.start_annotating_button = QPushButton("Start Annotating")
         self.start_annotating_button.clicked.connect(self.start_annotating)
-        self.layout.addWidget(self.start_annotating_button)
+        layout.addWidget(self.start_annotating_button)
+
+    def on_class_selected(self):
+        radio_button = self.sender()
+        if radio_button.isChecked():
+            self.selected_class = radio_button.text()
 
     def start_annotating(self):
-        # Creates a new point layer on the viewer
+        # Creates a new point layer or retrieves an existing one
         if 'Annotations' not in [layer.name for layer in self.viewer.layers]:
-            points_layer = self.viewer.add_points(name='Annotations')
-            self.annotation_layer = points_layer
+            self.points_layer = self.viewer.add_points(name='Annotations')
             print("Annotation layer added.")
         else:
-            print("Annotation layer already exists.")
+            self.points_layer = self.viewer.layers['Annotations']
+            print("Using existing annotation layer.")
+
+        # Set the point layer to add points in the color of the selected class
+        self.points_layer.current_face_color = self.class_colors[self.selected_class].name()
+
+        # Listen for point additions on the viewer
+        self.viewer.mouse_drag_callbacks.append(self.add_point)
+
+    def add_point(self, layer, event):
+        # This function adds a point where the user clicks
+        coord = self.viewer.cursor.position
+        self.points_layer.data = np.append(self.points_layer.data, [coord], axis=0)
+        print(f"Added point at {coord} for class {self.selected_class}.")
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
