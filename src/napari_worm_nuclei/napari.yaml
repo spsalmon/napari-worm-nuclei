@@ -5,15 +5,17 @@ contributions:
     - id: napari-worm-nuclei.data_reader
       python_name: napari_worm_nuclei._widget:DataReader
       title: Data Reader
-    #- id: napari-annotator.make_magic_widget
-    #  python_name: napari_annotator._widget:example_magic_widget
-    #  title: Make example magic widget
+    - id: napari-worm-nuclei.annotation_tool
+      python_name: napari_annotator._widget:AnnotationTool
+      title: Annotation Tool
     #- id: napari-annotator.make_func_widget
     #  python_name: napari_annotator._widget:example_function_widget
     #  title: Make example function widget
   widgets:
     - command: napari-worm-nuclei.data_reader
       display_name: Data Reader
+    - command: napari-worm-nuclei.annotation_tool
+      display_name: Annotation Tool
     #- command: napari-annotator.make_magic_widget
     #  display_name: Example Magic Widget
     #- command: napari-annotator.make_func_widget

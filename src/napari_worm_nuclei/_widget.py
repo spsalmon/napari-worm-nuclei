@@ -53,7 +53,9 @@ class DataReader(QWidget):
 
     def setup_ui(self):
         self.layout = QVBoxLayout()
-        self.layout.setSpacing(1)  # Reduced spacing between widgets
+        self.layout.setSpacing(10)
+        # Decrease the margin to make the widget more compact
+        self.layout.setContentsMargins(0, 0, 0, 0)
         self.setup_directory_selection()
         self.setup_file_controls()
         self.setup_navigation_controls()
@@ -170,6 +172,28 @@ class DataReader(QWidget):
         # Auto adjust the contrast limits of the image layer
         self.viewer.layers[-2].contrast_limits = (img_data.min(), img_data.max())
 
+class AnnotationTool(QWidget):
+    def __init__(self, viewer: "napari.viewer.Viewer"):
+        super().__init__()
+        self.viewer = viewer
+        self.layout = QVBoxLayout(self)
+        self.setup_ui()
+
+        self.annotation_layer = None
+
+    def setup_ui(self):
+        self.start_annotating_button = QPushButton("Start Annotating")
+        self.start_annotating_button.clicked.connect(self.start_annotating)
+        self.layout.addWidget(self.start_annotating_button)
+
+    def start_annotating(self):
+        # Creates a new point layer on the viewer
+        if 'Annotations' not in [layer.name for layer in self.viewer.layers]:
+            points_layer = self.viewer.add_points(name='Annotations')
+            self.annotation_layer = points_layer
+            print("Annotation layer added.")
+        else:
+            print("Annotation layer already exists.")
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
