@@ -10,6 +10,8 @@ import pandas as pd
 import tifffile
 import napari
 from scipy.ndimage import find_objects
+import xgboost as xgb
+from skimage.measure import regionprops_table
 
 def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
     subdir_filemap = file_handling.get_dir_filemap(dir_path)
@@ -203,6 +205,14 @@ class AnnotationTool(QWidget):
         self.layout.addWidget(dir_button)
         return dir_edit, dir_button
 
+    def create_file_selector(self, button_label):
+        file_edit = QLineEdit()
+        file_button = QPushButton(button_label)
+        file_button.clicked.connect(lambda: self.select_file(file_edit))
+        self.layout.addWidget(file_edit)
+        self.layout.addWidget(file_button)
+        return file_edit, file_button
+
     def select_directory(self, dir_edit):
         dir_path = QFileDialog.getExistingDirectory(self, "Select Directory")
         if dir_path:
@@ -210,6 +220,15 @@ class AnnotationTool(QWidget):
             return dir_path
         else:
             print("Directory selection cancelled.")
+            return ""
+
+    def select_file(self, file_edit):
+        file_path, _ = QFileDialog.getOpenFileName(self, "Select File")
+        if file_path:
+            file_edit.setText(file_path)
+            return file_path
+        else:
+            print("File selection cancelled.")
             return ""
 
     def setup_ui(self):
@@ -244,6 +263,12 @@ class AnnotationTool(QWidget):
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_annotations)
         self.layout.addWidget(self.save_button)
+
+        self.model_file_edit, self.model_file_button = self.create_file_selector("Select XGB Model")
+
+        self.predict_button = QPushButton("Predict")
+        self.predict_button.clicked.connect(self.predict)
+        self.layout.addWidget(self.predict_button)
 
         self.setLayout(self.layout)
 
@@ -285,39 +310,6 @@ class AnnotationTool(QWidget):
             self.points_layer.current_face_color = self.class_colors[self.selected_class]
             print(f"Ready to add points with color {self.class_colors[self.selected_class]} for class {self.selected_class}.")
 
-    # def convert_labels(self):
-    #     if not hasattr(self, 'points_layer'):
-    #         print("No points layer to convert.")
-    #         return
-
-    #     label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
-    #     if not label_layers:
-    #         print("No label layer found.")
-    #         return
-    #     base_label_layer = label_layers[-1]
-
-    #     # Create an empty label layer with the same shape and dimensions
-    #     new_labels = np.zeros_like(base_label_layer.data)
-
-    #     # Map points to labels based on their color
-    #     for point, color in zip(self.points_layer.data, self.points_layer.face_color):
-    #         # Convert float coordinates to integer indices
-    #         indices = tuple(int(p) for p in point)
-    #         # Check if the indices are within the valid range of the label layer
-    #         if all(0 <= idx < dim for idx, dim in zip(indices, base_label_layer.data.shape)):
-    #             label_value = base_label_layer.data[indices]
-    #             if label_value != 0:  # Check if the point is inside a labeled region
-    #                 object_slices = find_objects(base_label_layer.data == label_value)[0]
-    #                 # Copy the labeled region to new_labels, changing the label
-    #                 new_labels[object_slices] = np.where(
-    #                     base_label_layer.data[object_slices] == label_value,
-    #                     self.color_to_class[tuple(color)],
-    #                     new_labels[object_slices]
-    #                 )
-
-    #     # Add new label layer to the viewer
-    #     self.viewer.add_labels(new_labels, name="Converted Labels")
-
     def save_annotations(self):
         """Save the annotations as a CSV file."""
         if not hasattr(self, 'points_layer'):
@@ -356,6 +348,55 @@ class AnnotationTool(QWidget):
             annotation_dataframe = pd.concat([annotation_dataframe, pd.DataFrame([[point[0], label_value, class_value]], columns=['Plane', 'Label', 'Class'])])
 
         annotation_dataframe.to_csv(save_path, index=False)
+
+    def predict(self):
+        # Load the XGB model
+        model_path = self.model_file_edit.text()
+        if not model_path:
+            print("Please select a model file.")
+            return
+        clf = xgb.XGBClassifier()
+        clf.load_model(model_path)
+
+        label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
+        if not label_layers:
+            print("No label layer found.")
+            return
+        base_label_layer = label_layers[-1]
+        label_data = base_label_layer.data
+
+        img_layer = self.viewer.layers[0]
+        img_data = img_layer.data[0]
+
+        print(img_data.shape)
+
+        # If the image is 3D, iterate over each plane
+        if img_data.ndim == 3:
+            for i, plane_img in enumerate(img_data):
+                # Get the label data for the current plane
+                plane_labels = label_data[i]
+                feature_of_all_labels = regionprops_table(plane_labels, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
+                mean_features_plane = []
+                for key in feature_of_all_labels:
+                    mean_features_plane.append(np.mean(feature_of_all_labels[key]))
+
+                # Predict the class of each label
+                for label in np.unique(plane_labels):
+                    if label == 0:
+                        continue
+                    label_mask = plane_labels == label
+                    features_of_label = regionprops_table(label_mask, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
+                    feature = []
+                    for key in features_of_label:
+                        feature.extend(features_of_label[key])
+
+                    # concatenate the features of the label with the mean features of all labels
+                    feature_vector = np.concatenate((feature, mean_features_plane))
+                    feature_vector = feature_vector.reshape(1, -1)
+                    print(feature_vector.shape)
+                    prediction = clf.predict(feature_vector)
+                    print(f'Prediction for label {label}: {prediction}')
+
 
 
 # class ExampleQWidget(QWidget):
