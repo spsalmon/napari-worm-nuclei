@@ -235,9 +235,9 @@ class AnnotationTool(QWidget):
 
         self.layout.addLayout(class_layout)
 
-        self.convert_labels_button = QPushButton("Convert Labels")
-        self.convert_labels_button.clicked.connect(self.convert_labels)
-        self.layout.addWidget(self.convert_labels_button)
+        # self.convert_labels_button = QPushButton("Convert Labels")
+        # self.convert_labels_button.clicked.connect(self.convert_labels)
+        # self.layout.addWidget(self.convert_labels_button)
 
         self.save_dir_edit, self.save_dir_button = self.create_dir_selector("Select Save Directory")
 
@@ -285,38 +285,38 @@ class AnnotationTool(QWidget):
             self.points_layer.current_face_color = self.class_colors[self.selected_class]
             print(f"Ready to add points with color {self.class_colors[self.selected_class]} for class {self.selected_class}.")
 
-    def convert_labels(self):
-        if not hasattr(self, 'points_layer'):
-            print("No points layer to convert.")
-            return
+    # def convert_labels(self):
+    #     if not hasattr(self, 'points_layer'):
+    #         print("No points layer to convert.")
+    #         return
 
-        label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
-        if not label_layers:
-            print("No label layer found.")
-            return
-        base_label_layer = label_layers[-1]
+    #     label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
+    #     if not label_layers:
+    #         print("No label layer found.")
+    #         return
+    #     base_label_layer = label_layers[-1]
 
-        # Create an empty label layer with the same shape and dimensions
-        new_labels = np.zeros_like(base_label_layer.data)
+    #     # Create an empty label layer with the same shape and dimensions
+    #     new_labels = np.zeros_like(base_label_layer.data)
 
-        # Map points to labels based on their color
-        for point, color in zip(self.points_layer.data, self.points_layer.face_color):
-            # Convert float coordinates to integer indices
-            indices = tuple(int(p) for p in point)
-            # Check if the indices are within the valid range of the label layer
-            if all(0 <= idx < dim for idx, dim in zip(indices, base_label_layer.data.shape)):
-                label_value = base_label_layer.data[indices]
-                if label_value != 0:  # Check if the point is inside a labeled region
-                    object_slices = find_objects(base_label_layer.data == label_value)[0]
-                    # Copy the labeled region to new_labels, changing the label
-                    new_labels[object_slices] = np.where(
-                        base_label_layer.data[object_slices] == label_value,
-                        self.color_to_class[tuple(color)],
-                        new_labels[object_slices]
-                    )
+    #     # Map points to labels based on their color
+    #     for point, color in zip(self.points_layer.data, self.points_layer.face_color):
+    #         # Convert float coordinates to integer indices
+    #         indices = tuple(int(p) for p in point)
+    #         # Check if the indices are within the valid range of the label layer
+    #         if all(0 <= idx < dim for idx, dim in zip(indices, base_label_layer.data.shape)):
+    #             label_value = base_label_layer.data[indices]
+    #             if label_value != 0:  # Check if the point is inside a labeled region
+    #                 object_slices = find_objects(base_label_layer.data == label_value)[0]
+    #                 # Copy the labeled region to new_labels, changing the label
+    #                 new_labels[object_slices] = np.where(
+    #                     base_label_layer.data[object_slices] == label_value,
+    #                     self.color_to_class[tuple(color)],
+    #                     new_labels[object_slices]
+    #                 )
 
-        # Add new label layer to the viewer
-        self.viewer.add_labels(new_labels, name="Converted Labels")
+    #     # Add new label layer to the viewer
+    #     self.viewer.add_labels(new_labels, name="Converted Labels")
 
     def save_annotations(self):
         """Save the annotations as a CSV file."""
@@ -334,7 +334,7 @@ class AnnotationTool(QWidget):
         # replace the file extension with .csv
         save_name = os.path.splitext(save_name)[0] + '.csv'
         save_path = os.path.join(save_dir, save_name)
-        annotation_dataframe = pd.DataFrame(self.points_layer.data, columns=['Plane', 'Label', 'Class'])
+        annotation_dataframe = pd.DataFrame(columns=['Plane', 'Label', 'Class'])
 
         label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
         if not label_layers:
