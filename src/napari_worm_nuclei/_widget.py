@@ -329,11 +329,28 @@ class AnnotationTool(QWidget):
             print("Please select a save directory.")
             return
 
-        save_path = os.path.join(save_dir, 'annotations.csv')
+        # Get the name of the image layer
+        save_name = self.viewer.layers[0].name
+        # replace the file extension with .csv
+        save_name = os.path.splitext(save_name)[0] + '.csv'
+        save_path = os.path.join(save_dir, save_name)
         annotation_dataframe = pd.DataFrame(self.points_layer.data, columns=['Plane', 'Label', 'Class'])
 
         for point, color in zip(self.points_layer.data, self.points_layer.face_color):
-            print(f'Point: {point}, Color: {color}')
+            # For each point, get the value of the label layer at that point
+            # convert the point coordinates to integers
+            point = tuple(int(p) for p in point)
+            label_value = self.viewer.layers['Labels'].data[tuple(point)]
+            if label_value == 0:
+                continue
+            # Map the color to a class value
+            class_value = self.color_to_class[tuple(color)]
+            # Convert annotation_dataframe to DataFrame and append the new row
+            annotation_dataframe = pd.concat([annotation_dataframe, pd.DataFrame([[point[0], label_value, class_value]], columns=['Plane', 'Label', 'Class'])])
+
+        annotation_dataframe.to_csv(save_path, index=False)
+
+
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
 #     # use a type annotation of 'napari.viewer.Viewer' for any parameter
