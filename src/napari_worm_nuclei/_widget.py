@@ -195,6 +195,7 @@ class AnnotationTool(QWidget):
         # Map colors to class values using tuples as keys
         self.color_to_class = {self.class_colors[cls]: self.class_values[cls] for cls in self.class_colors}
         self.class_values_to_color = {self.class_values[cls]: self.class_colors[cls] for cls in self.class_colors}
+        print(self.class_values_to_color)
         self.setup_ui()
 
     def create_dir_selector(self, button_label):
@@ -404,8 +405,9 @@ class AnnotationTool(QWidget):
                     centroid = np.mean(np.argwhere(label_mask), axis=0)
                     # Add the centroid to the annotation layer
                     print(f'plane {i}, centroid {centroid}, prediction {prediction}')
-                    self.points_layer.data = np.append(self.points_layer.data, [i, centroid[0], centroid[1]])
+                    self.points_layer.data = np.append(self.points_layer.data, np.array([i, centroid[0], centroid[1]]))
                     # Add the predicted class to the annotation layer
+                    print(f'Color {self.class_values_to_color[prediction]}')
                     self.points_layer.face_color = np.append(self.points_layer.face_color, self.class_values_to_color[prediction])
 
 # class ExampleQWidget(QWidget):
