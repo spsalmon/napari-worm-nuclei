@@ -374,7 +374,7 @@ class AnnotationTool(QWidget):
         if img_data.ndim == 3:
             for i, plane_img in enumerate(img_data):
                 # Get the label data for the current plane
-                plane_labels = label_data[i]
+                plane_labels = label_data[i].astype(np.uint8)
                 feature_of_all_labels = regionprops_table(plane_labels, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
                 mean_features_plane = []
                 for key in feature_of_all_labels:
