@@ -213,11 +213,14 @@ class AnnotationTool(QWidget):
             return ""
 
     def setup_ui(self):
-        layout = QVBoxLayout(self)
+        self.layout = QVBoxLayout()
+        self.layout.setSpacing(10)
+        # Decrease the margin to make the widget more compact
+        self.layout.setContentsMargins(0, 0, 0, 0)
 
         self.start_annotating_button = QPushButton("Start Annotating")
         self.start_annotating_button.clicked.connect(self.prepare_annotation_layer)
-        layout.addWidget(self.start_annotating_button)
+        self.layout.addWidget(self.start_annotating_button)
 
         # Setup radio buttons for class selection
         self.class_buttons = QButtonGroup(self)  # Using a button group to manage radio buttons
@@ -230,19 +233,19 @@ class AnnotationTool(QWidget):
             if cls == 'epidermis':
                 btn.setChecked(True)  # Set default selected class
 
-        layout.addLayout(class_layout)
+        self.layout.addLayout(class_layout)
 
         self.convert_labels_button = QPushButton("Convert Labels")
         self.convert_labels_button.clicked.connect(self.convert_labels)
-        layout.addWidget(self.convert_labels_button)
+        self.layout.addWidget(self.convert_labels_button)
 
         self.save_dir_edit, self.save_dir_button = self.create_dir_selector("Select Save Directory")
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_annotations)
-        layout.addWidget(self.save_button)
+        self.layout.addWidget(self.save_button)
 
-        self.setLayout(layout)
+        self.setLayout(self.layout)
 
     def on_class_selected(self, checked):
         radio_button = self.sender()
