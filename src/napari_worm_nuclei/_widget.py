@@ -398,21 +398,18 @@ class AnnotationTool(QWidget):
                     # concatenate the features of the label with the mean features of all labels
                     feature_vector = np.concatenate((feature, mean_features_plane))
                     feature_vector = feature_vector.reshape(1, -1)
-                    print(feature_vector.shape)
                     prediction = clf.predict(feature_vector)[0]
 
                     # Get the centroid of the label
                     centroid = np.mean(np.argwhere(label_mask), axis=0)
                     # Add the centroid to the annotation layer
-                    print(f'plane {i}, centroid {centroid}, prediction {prediction}')
-                    point = np.array([i, centroid[1], centroid[0]]
+                    point = np.array([i, centroid[0], centroid[1]]
                         if self.points_layer.ndim == 3 else [centroid[1], centroid[0]])
-                    print(f'Points layer data shape {self.points_layer.data.shape}')
                     self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
 
                     # Add the predicted class to the annotation layer
                     print(f'Color {self.class_values_to_color[prediction]}')
-                    self.points_layer.face_color = np.append(self.points_layer.face_color, np.array(self.class_values_to_color[prediction]))
+                    self.points_layer.face_color = np.append(self.points_layer.face_color, np.array([self.class_values_to_color[prediction]]))
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
