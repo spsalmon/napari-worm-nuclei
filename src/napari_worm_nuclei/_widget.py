@@ -384,7 +384,7 @@ class AnnotationTool(QWidget):
                 for label in np.unique(plane_labels):
                     if label == 0:
                         continue
-                    label_mask = plane_labels == label
+                    label_mask = (plane_labels == label).astype(np.uint8)
                     features_of_label = regionprops_table(label_mask, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
                     feature = []
                     for key in features_of_label:
