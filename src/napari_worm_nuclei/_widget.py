@@ -410,7 +410,7 @@ class AnnotationTool(QWidget):
                     # Add the predicted class to the annotation layer
                     print(f'Color {np.array(self.class_values_to_color[prediction]).astype(float)}')
                     print(f'face color shape {self.points_layer.face_color.shape}')
-                    self.points_layer.face_color = np.append(self.points_layer.face_color, np.array(self.class_values_to_color[prediction]).astype(float), axis=0)
+                    self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
