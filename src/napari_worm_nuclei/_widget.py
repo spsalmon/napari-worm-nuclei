@@ -319,21 +319,21 @@ class AnnotationTool(QWidget):
         self.viewer.add_labels(new_labels, name="Converted Labels")
 
     def save_annotations(self):
-        # If no Convert Labels layer is present, run the conversion
-        if 'Converted Labels' not in [layer.name for layer in self.viewer.layers]:
-            self.convert_labels()
+        """Save the annotations as a CSV file."""
+        if not hasattr(self, 'points_layer'):
+            print("No annotations to save.")
+            return
 
         save_dir = self.save_dir_edit.text()
         if not save_dir:
             print("Please select a save directory.")
             return
 
-        # Get the name of the current image
-        img_name = self.viewer.layers[0].name
-        save_path = os.path.join(save_dir, img_name)
-        # Save the labels as a tiff file
-        tifffile.imwrite(save_path, self.viewer.layers['Converted Labels'].data, compression="zlib")
+        save_path = os.path.join(save_dir, 'annotations.csv')
+        annotation_dataframe = pd.DataFrame(self.points_layer.data, columns=['Plane', 'Label', 'Class'])
 
+        for point, color in zip(self.points_layer.data, self.points_layer.face_color):
+            print(f'Point: {point}, Color: {color}')
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
 #     # use a type annotation of 'napari.viewer.Viewer' for any parameter
