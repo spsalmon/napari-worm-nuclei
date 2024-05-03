@@ -164,8 +164,8 @@ class DataReader(QWidget):
             img_data = np.swapaxes(img_data, 0, 1)
 
         # Add images to Napari viewer
-        self.viewer.add_image(img_data, name=f"Image at time {time} point {point}")
-        self.viewer.add_labels(mask_data, name=f"Mask at time {time} point {point}")
+        self.viewer.add_image(img_data, name=os.path.basename(img_path))
+        self.viewer.add_labels(mask_data, name=os.path.basename(mask_path))
 
         # Set the label layer opacity to 0.5
         self.viewer.layers[-1].opacity = 0.5
@@ -195,6 +195,23 @@ class AnnotationTool(QWidget):
 
         self.setup_ui()
 
+    def create_dir_selector(self, button_label):
+        dir_edit = QLineEdit()
+        dir_button = QPushButton(button_label)
+        dir_button.clicked.connect(lambda: self.select_directory(dir_edit))
+        self.layout.addWidget(dir_edit)
+        self.layout.addWidget(dir_button)
+        return dir_edit, dir_button
+
+    def select_directory(self, dir_edit):
+        dir_path = QFileDialog.getExistingDirectory(self, "Select Directory")
+        if dir_path:
+            dir_edit.setText(dir_path)
+            return dir_path
+        else:
+            print("Directory selection cancelled.")
+            return ""
+
     def setup_ui(self):
         layout = QVBoxLayout(self)
 
@@ -218,6 +235,14 @@ class AnnotationTool(QWidget):
         self.convert_labels_button = QPushButton("Convert Labels")
         self.convert_labels_button.clicked.connect(self.convert_labels)
         layout.addWidget(self.convert_labels_button)
+
+        self.save_dir_edit, self.save_dir_button = self.create_dir_selector("Select Save Directory")
+
+        self.save_button = QPushButton("Save")
+        self.save_button.clicked.connect(self.save_annotations)
+        layout.addWidget(self.save_button)
+
+        self.setLayout(layout)
 
     def on_class_selected(self, checked):
         radio_button = self.sender()
@@ -289,6 +314,22 @@ class AnnotationTool(QWidget):
 
         # Add new label layer to the viewer
         self.viewer.add_labels(new_labels, name="Converted Labels")
+
+    def save_annotations(self):
+        # If no Convert Labels layer is present, run the conversion
+        if 'Converted Labels' not in [layer.name for layer in self.viewer.layers]:
+            self.convert_labels()
+
+        save_dir = self.save_dir_edit.text()
+        if not save_dir:
+            print("Please select a save directory.")
+            return
+
+        # Get the name of the current image
+        img_name = self.viewer.layers[0].name
+        save_path = os.path.join(save_dir, img_name)
+        # Save the labels as a tiff file
+        tifffile.imwrite(save_path, self.viewer.layers['Converted Labels'].data, compression="zlib")
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
