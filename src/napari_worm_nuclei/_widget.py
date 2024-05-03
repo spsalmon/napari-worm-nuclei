@@ -398,7 +398,7 @@ class AnnotationTool(QWidget):
                     feature_vector = np.concatenate((feature, mean_features_plane))
                     feature_vector = feature_vector.reshape(1, -1)
                     print(feature_vector.shape)
-                    prediction = clf.predict(feature_vector)
+                    prediction = clf.predict(feature_vector)[0]
 
                     # Get the centroid of the label
                     centroid = np.mean(np.argwhere(label_mask), axis=0)
