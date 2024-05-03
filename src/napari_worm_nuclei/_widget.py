@@ -186,15 +186,15 @@ class AnnotationTool(QWidget):
             'error': (1, 0.5, 0.5, 1)  # Coral Pink
         }
         self.class_values = {
-            'epidermis': 1,
-            'intestine': 2,
-            'other': 3,
-            'error': 4
+            'epidermis': 0,
+            'intestine': 1,
+            'other': 2,
+            'error': 3
         }
 
         # Map colors to class values using tuples as keys
         self.color_to_class = {self.class_colors[cls]: self.class_values[cls] for cls in self.class_colors}
-
+        self.class_values_to_color = {self.class_values[cls]: self.class_colors[cls] for cls in self.class_colors}
         self.setup_ui()
 
     def create_dir_selector(self, button_label):
@@ -370,6 +370,10 @@ class AnnotationTool(QWidget):
 
         print(img_data.shape)
 
+        # If there is no annotation layer, make one
+        if 'Annotations' not in [layer.name for layer in self.viewer.layers]:
+            self.prepare_annotation_layer()
+
         # If the image is 3D, iterate over each plane
         if img_data.ndim == 3:
             for i, plane_img in enumerate(img_data):
@@ -395,7 +399,13 @@ class AnnotationTool(QWidget):
                     feature_vector = feature_vector.reshape(1, -1)
                     print(feature_vector.shape)
                     prediction = clf.predict(feature_vector)
-                    print(f'Prediction for label {label}: {prediction}')
+
+                    # Get the centroid of the label
+                    centroid = np.mean(np.argwhere(label_mask), axis=0)
+                    # Add the centroid to the annotation layer
+                    self.points_layer.add(np.array([i, centroid[1], centroid[0]]), face_color=self.class_values_to_color[prediction[0]])
+
+
 
 
 
