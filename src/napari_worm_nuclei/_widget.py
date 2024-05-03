@@ -336,11 +336,18 @@ class AnnotationTool(QWidget):
         save_path = os.path.join(save_dir, save_name)
         annotation_dataframe = pd.DataFrame(self.points_layer.data, columns=['Plane', 'Label', 'Class'])
 
+        label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
+        if not label_layers:
+            print("No label layer found.")
+            return
+        base_label_layer = label_layers[-1]
+        label_data = base_label_layer.data
+
         for point, color in zip(self.points_layer.data, self.points_layer.face_color):
             # For each point, get the value of the label layer at that point
             # convert the point coordinates to integers
             point = tuple(int(p) for p in point)
-            label_value = self.viewer.layers['Labels'].data[tuple(point)]
+            label_value = label_data[tuple(point)]
             if label_value == 0:
                 continue
             # Map the color to a class value
