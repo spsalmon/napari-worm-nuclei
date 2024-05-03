@@ -403,11 +403,10 @@ class AnnotationTool(QWidget):
                     # Get the centroid of the label
                     centroid = np.mean(np.argwhere(label_mask), axis=0)
                     # Add the centroid to the annotation layer
-                    self.points_layer.add(np.array([i, centroid[1], centroid[0]]), face_color=self.class_values_to_color[prediction[0]])
-
-
-
-
+                    print(f'plane {i}, centroid {centroid}, prediction {prediction}')
+                    self.points_layer.data = np.append(self.points_layer.data, [i, centroid[0], centroid[1]])
+                    # Add the predicted class to the annotation layer
+                    self.points_layer.face_color = np.append(self.points_layer.face_color, self.class_values_to_color[prediction])
 
 # class ExampleQWidget(QWidget):
 #     # your QWidget.__init__ can optionally request the napari viewer instance
