@@ -345,7 +345,7 @@ class AnnotationTool(QWidget):
                 point = np.array([centroid[0], centroid[1]])
             print(point)
             print(f'point layer data shape: {self.points_layer.data.shape}')
-            self.points_layer.data = np.append(self.points_layer.data, point, axis=0)
+            self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
 
             # Add the predicted class to the annotation layer
             self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
