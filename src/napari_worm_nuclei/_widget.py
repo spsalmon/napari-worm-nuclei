@@ -315,7 +315,7 @@ class AnnotationTool(QWidget):
 
         annotation_dataframe.to_csv(save_path, index=False)
 
-    def predict_on_plane(self, clf, plane_img, plane_labels):
+    def predict_on_plane(self, clf, plane_img, plane_labels, plane_idx = None):
         feature_of_all_labels = regionprops_table(plane_labels, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
         mean_features_plane = []
         for key in feature_of_all_labels:
@@ -339,13 +339,13 @@ class AnnotationTool(QWidget):
             # Get the centroid of the label
             centroid = np.mean(np.argwhere(label_mask), axis=0)
             # Add the centroid to the annotation layer
-            point = np.array([centroid[0], centroid[1]])
+            if plane_idx is not None:
+                point = np.array([plane_idx, centroid[0], centroid[1]])
+            else:
+                point = np.array([centroid[0], centroid[1]])
             print(point)
             print(f'point layer data shape: {self.points_layer.data.shape}')
-            if self.points_layer.data.shape[0] == 0:
-                self.points_layer.data = np.array([point])
-            else:
-                self.points_layer.data = np.append(self.points_layer.data, point, axis=0)
+            self.points_layer.data = np.append(self.points_layer.data, point, axis=0)
 
             # Add the predicted class to the annotation layer
             self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
@@ -379,10 +379,10 @@ class AnnotationTool(QWidget):
 
         # If the image is 3D, iterate over each plane
         if img_data.ndim == 3:
-            for i, plane_img in enumerate(img_data):
+            for plane_idx, plane_img in enumerate(img_data):
                 # Get the label data for the current plane
                 plane_labels = label_data[i].astype(np.uint8)
-                self.predict_on_plane(clf, plane_img, plane_labels)
+                self.predict_on_plane(clf, plane_img, plane_labels, plane_idx)
         else:
             plane_img = img_data
             plane_labels = label_data[0].astype(np.uint8)
