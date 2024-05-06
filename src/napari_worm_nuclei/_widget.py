@@ -381,7 +381,7 @@ class AnnotationTool(QWidget):
         if img_data.ndim == 3:
             for plane_idx, plane_img in enumerate(img_data):
                 # Get the label data for the current plane
-                plane_labels = label_data[i].astype(np.uint8)
+                plane_labels = label_data[plane_idx].astype(np.uint8)
                 self.predict_on_plane(clf, plane_img, plane_labels, plane_idx)
         else:
             plane_img = img_data
