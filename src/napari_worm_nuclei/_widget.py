@@ -25,27 +25,49 @@ def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
     experiment_filemap = experiment_filemap.replace(np.nan, "", regex=True)
     return experiment_filemap
 
+def process_images_for_loading(img_path, mask_path):
+    img_data = tifffile.imread(img_path)
+    mask_data = tifffile.imread(mask_path)
 
-# if we want even more control over our widget, we can use
-# magicgui `Container`
-# class DataReader(Container):
-#     def __init__(self, viewer: "napari.viewer.Viewer"):
-#         super().__init__()
-#         self._viewer = viewer
+    # If the image is 4D, swap the first and second axes
+    if img_data.ndim == 4:
+        img_data = np.swapaxes(img_data, 0, 1)
 
-#         # create a widget allowing the user to select a folder containing images
-#         self.img_dir = create_widget(annotation=os.PathLike, label="Image directory")
-#         self.img_dir.changed.connect(self._on_img_dir_change)
+    return img_data, mask_data
 
-#         self.mask_dir = create_widget(annotation=os.PathLike, label="Mask directory")
-#         self.mask_dir.changed.connect(self._on_mask_dir_change)
+def create_dir_selector(parent, layout, button_label):
+    dir_edit = QLineEdit()
+    dir_button = QPushButton(button_label)
+    dir_button.clicked.connect(lambda: select_directory(parent, dir_edit))
+    layout.addWidget(dir_edit)
+    layout.addWidget(dir_button)
+    return dir_edit, dir_button
 
-#     def _on_img_dir_change(self, event):
-#         print(self.img_dir.value)
+def create_file_selector(parent, layout, button_label):
+    file_edit = QLineEdit()
+    file_button = QPushButton(button_label)
+    file_button.clicked.connect(lambda: select_file(parent, file_edit))
+    layout.addWidget(file_edit)
+    layout.addWidget(file_button)
+    return file_edit, file_button
 
-#     def _on_mask_dir_change(self, event):
-#         print(self.mask_dir.value)
+def select_directory(parent, dir_edit):
+    dir_path = QFileDialog.getExistingDirectory(parent, "Select Directory")
+    if dir_path:
+        dir_edit.setText(dir_path)
+        return dir_path
+    else:
+        print("Directory selection cancelled.")
+        return ""
 
+def select_file(parent, file_edit):
+    file_path, _ = QFileDialog.getOpenFileName(parent, "Select File")
+    if file_path:
+        file_edit.setText(file_path)
+        return file_path
+    else:
+        print("File selection cancelled.")
+        return ""
 
 class DataReader(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
@@ -66,25 +88,8 @@ class DataReader(QWidget):
 
     def setup_directory_selection(self):
         self.img_dir_path, self.mask_dir_path = "", ""
-        self.img_dir_edit, self.img_dir_button = self.create_dir_selector("Select Image Directory")
-        self.mask_dir_edit, self.mask_dir_button = self.create_dir_selector("Select Mask Directory")
-
-    def create_dir_selector(self, button_label):
-        dir_edit = QLineEdit()
-        dir_button = QPushButton(button_label)
-        dir_button.clicked.connect(lambda: self.select_directory(dir_edit))
-        self.layout.addWidget(dir_edit)
-        self.layout.addWidget(dir_button)
-        return dir_edit, dir_button
-
-    def select_directory(self, dir_edit):
-        dir_path = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if dir_path:
-            dir_edit.setText(dir_path)
-            return dir_path
-        else:
-            print("Directory selection cancelled.")
-            return ""
+        self.img_dir_edit, self.img_dir_button = create_dir_selector(self, self.layout, "Select Image Directory")
+        self.mask_dir_edit, self.mask_dir_button = create_dir_selector(self, self.layout, "Select Mask Directory")
 
     def setup_file_controls(self):
         self.get_files_button = QPushButton("Get Files")
@@ -157,13 +162,7 @@ class DataReader(QWidget):
         img_path = row["ImagePath"].values[0]
         mask_path = row["MaskPath"].values[0]
 
-        # Read images using tifffile
-        img_data = tifffile.imread(img_path)
-        mask_data = tifffile.imread(mask_path)
-
-        # If the image is 4D, swap the first and second axes
-        if img_data.ndim == 4:
-            img_data = np.swapaxes(img_data, 0, 1)
+        img_data, mask_data = process_images_for_loading(img_path, mask_path)
 
         # Add images to Napari viewer
         self.viewer.add_image(img_data, name=os.path.basename(img_path))
@@ -198,40 +197,6 @@ class AnnotationTool(QWidget):
         print(self.class_values_to_color)
         self.setup_ui()
 
-    def create_dir_selector(self, button_label):
-        dir_edit = QLineEdit()
-        dir_button = QPushButton(button_label)
-        dir_button.clicked.connect(lambda: self.select_directory(dir_edit))
-        self.layout.addWidget(dir_edit)
-        self.layout.addWidget(dir_button)
-        return dir_edit, dir_button
-
-    def create_file_selector(self, button_label):
-        file_edit = QLineEdit()
-        file_button = QPushButton(button_label)
-        file_button.clicked.connect(lambda: self.select_file(file_edit))
-        self.layout.addWidget(file_edit)
-        self.layout.addWidget(file_button)
-        return file_edit, file_button
-
-    def select_directory(self, dir_edit):
-        dir_path = QFileDialog.getExistingDirectory(self, "Select Directory")
-        if dir_path:
-            dir_edit.setText(dir_path)
-            return dir_path
-        else:
-            print("Directory selection cancelled.")
-            return ""
-
-    def select_file(self, file_edit):
-        file_path, _ = QFileDialog.getOpenFileName(self, "Select File")
-        if file_path:
-            file_edit.setText(file_path)
-            return file_path
-        else:
-            print("File selection cancelled.")
-            return ""
-
     def setup_ui(self):
         self.layout = QVBoxLayout()
         self.layout.setSpacing(10)
@@ -259,13 +224,13 @@ class AnnotationTool(QWidget):
         # self.convert_labels_button.clicked.connect(self.convert_labels)
         # self.layout.addWidget(self.convert_labels_button)
 
-        self.save_dir_edit, self.save_dir_button = self.create_dir_selector("Select Save Directory")
+        self.save_dir_edit, self.save_dir_button = create_dir_selector(self, self.layout, "Select Save Directory")
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_annotations)
         self.layout.addWidget(self.save_button)
 
-        self.model_file_edit, self.model_file_button = self.create_file_selector("Select XGB Model")
+        self.model_file_edit, self.model_file_button = create_file_selector(self, self.layout, "Select Model File")
 
         self.predict_button = QPushButton("Predict")
         self.predict_button.clicked.connect(self.predict)
@@ -350,12 +315,43 @@ class AnnotationTool(QWidget):
 
         annotation_dataframe.to_csv(save_path, index=False)
 
+    def predict_on_plane(self, clf, plane_img, plane_labels):
+        feature_of_all_labels = regionprops_table(plane_labels, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
+        mean_features_plane = []
+        for key in feature_of_all_labels:
+            mean_features_plane.append(np.mean(feature_of_all_labels[key]))
+
+        # Predict the class of each label
+        for label in np.unique(plane_labels):
+            if label == 0:
+                continue
+            label_mask = (plane_labels == label).astype(np.uint8)
+            features_of_label = regionprops_table(label_mask, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
+            feature = []
+            for key in features_of_label:
+                feature.extend(features_of_label[key])
+
+            # concatenate the features of the label with the mean features of all labels
+            feature_vector = np.concatenate((feature, mean_features_plane))
+            feature_vector = feature_vector.reshape(1, -1)
+            prediction = clf.predict(feature_vector)[0]
+
+            # Get the centroid of the label
+            centroid = np.mean(np.argwhere(label_mask), axis=0)
+            # Add the centroid to the annotation layer
+            point = np.array([centroid[0], centroid[1]])
+            self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
+
+            # Add the predicted class to the annotation layer
+            self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
+
     def predict(self):
         # Load the XGB model
         model_path = self.model_file_edit.text()
         if not model_path:
             print("Please select a model file.")
             return
+
         clf = xgb.XGBClassifier()
         clf.load_model(model_path)
 
@@ -363,6 +359,7 @@ class AnnotationTool(QWidget):
         if not label_layers:
             print("No label layer found.")
             return
+
         base_label_layer = label_layers[-1]
         label_data = base_label_layer.data
 
@@ -380,50 +377,8 @@ class AnnotationTool(QWidget):
             for i, plane_img in enumerate(img_data):
                 # Get the label data for the current plane
                 plane_labels = label_data[i].astype(np.uint8)
-                feature_of_all_labels = regionprops_table(plane_labels, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
-                mean_features_plane = []
-                for key in feature_of_all_labels:
-                    mean_features_plane.append(np.mean(feature_of_all_labels[key]))
-
-                # Predict the class of each label
-                for label in np.unique(plane_labels):
-                    if label == 0:
-                        continue
-                    label_mask = (plane_labels == label).astype(np.uint8)
-                    features_of_label = regionprops_table(label_mask, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
-                    feature = []
-                    for key in features_of_label:
-                        feature.extend(features_of_label[key])
-
-                    # concatenate the features of the label with the mean features of all labels
-                    feature_vector = np.concatenate((feature, mean_features_plane))
-                    feature_vector = feature_vector.reshape(1, -1)
-                    prediction = clf.predict(feature_vector)[0]
-
-                    # Get the centroid of the label
-                    centroid = np.mean(np.argwhere(label_mask), axis=0)
-                    # Add the centroid to the annotation layer
-                    point = np.array([i, centroid[0], centroid[1]]
-                        if self.points_layer.ndim == 3 else [centroid[1], centroid[0]])
-                    self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
-
-                    # Add the predicted class to the annotation layer
-                    print(f'Color {np.array(self.class_values_to_color[prediction]).astype(float)}')
-                    print(f'face color shape {self.points_layer.face_color.shape}')
-                    self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
-
-# class ExampleQWidget(QWidget):
-#     # your QWidget.__init__ can optionally request the napari viewer instance
-#     # use a type annotation of 'napari.viewer.Viewer' for any parameter
-#     def __init__(self, viewer: "napari.viewer.Viewer"):
-#         super().__init__()
-#         self.viewer = viewer
-
-#         btn = QPushButton("Click me!")
-#         btn.clicked.connect(self._on_click)
-
-#         self.setLayout(QHBoxLayout())
-#         self.layout().addWidget(btn)
-
-#     def _on_click(self):
-#         print("napari has", len(self.viewer.layers), "layers")
+                self.predict_on_plane(clf, plane_img, plane_labels)
+        else:
+            plane_img = img_data
+            plane_labels = label_data[0].astype(np.uint8)
+            self.predict_on_plane(clf, plane_img, plane_labels)
