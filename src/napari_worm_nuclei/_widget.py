@@ -11,7 +11,179 @@ import tifffile
 import napari
 from scipy.ndimage import find_objects
 import xgboost as xgb
-from skimage.measure import regionprops_table
+from skimage.measure import regionprops, regionprops_table, label, find_contours, shannon_entropy
+from scipy.stats import skew, kurtosis
+from skimage.feature import graycomatrix, graycoprops
+from skimage.util import img_as_ubyte
+
+def intensity_std(regionmask, intensity_image):
+    return np.std(intensity_image[regionmask])
+
+def intensity_skew(regionmask, intensity_image):
+    return skew(intensity_image[regionmask])
+
+def intensity_kurtosis(regionmask, intensity_image):
+    return kurtosis(intensity_image[regionmask])
+
+def compute_haralick_features(patch):
+    # Calculate the Grey-Level Co-Occurrence Matrix
+    glcm = graycomatrix(img_as_ubyte(patch), distances=[1], angles=[0], levels=256, symmetric=True, normed=True)
+    # Calculate properties
+    contrast = graycoprops(glcm, 'contrast')[0, 0]
+    dissimilarity = graycoprops(glcm, 'dissimilarity')[0, 0]
+    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
+    energy = graycoprops(glcm, 'energy')[0, 0]
+    correlation = graycoprops(glcm, 'correlation')[0, 0]
+    
+    return [contrast, dissimilarity, homogeneity, energy, correlation]
+
+
+def compute_patch_features(regionmask, intensity_image, patch_size=64):
+    # Get the centroid of the region
+    centroid = regionprops(regionmask.astype("uint8"))[0].centroid
+    # Create a patch of the defined size around the centroid
+    minr = int(centroid[0] - patch_size/2)
+    maxr = int(centroid[0] + patch_size/2)
+    minc = int(centroid[1] - patch_size/2)
+    maxc = int(centroid[1] + patch_size/2)
+
+    if minr < 0:
+        minr = 0
+        maxr = patch_size
+    if minc < 0:
+        minc = 0
+        maxc = patch_size
+    if maxr >= intensity_image.shape[0]:
+        maxr = intensity_image.shape[0] - 1
+        minr = maxr - patch_size
+    if maxc >= intensity_image.shape[1]:
+        maxc = intensity_image.shape[1] - 1
+        minc = maxc - patch_size
+
+    patch = intensity_image[minr:maxr, minc:maxc]
+
+    patch_basic_intensity_features = [np.max(patch), np.min(patch), np.mean(patch), np.std(patch), skew(patch.ravel()), kurtosis(patch.ravel())]
+    patch_texture_features = compute_haralick_features(patch)
+    # patch_texture_features = []
+    patch_advanced_intensity_features = [shannon_entropy(patch)]
+
+    patch_features = patch_basic_intensity_features + patch_texture_features + patch_advanced_intensity_features
+
+    return patch_features
+
+geometrical_features = ('area', 'area_convex', 'equivalent_diameter', 'perimeter', 'eccentricity', 'major_axis_length', 'minor_axis_length', 'solidity', 'extent', 'feret_diameter_max')
+intensity_features = ('intensity_max', 'intensity_min', 'intensity_mean')
+extra_intensity_features = (intensity_std, intensity_skew, intensity_kurtosis)
+# extra_texture_features = (compute_texture_features,)
+
+all_features = geometrical_features + intensity_features
+extra_properties = extra_intensity_features
+
+def compute_base_label_features(mask_of_label, intensity_image, features, extra_properties):
+    properties = regionprops_table(mask_of_label, intensity_image=intensity_image, properties=features, extra_properties=extra_properties)  
+    feature_vector = []
+    for feature in properties:
+        feature_vector.append(properties[feature][0])
+    return feature_vector
+
+def get_context(current_label, mask_of_current_label, mask_of_labels, num_closest=5):
+    mask_of_all_other_labels = mask_of_labels.copy()
+    mask_of_all_other_labels[mask_of_all_other_labels == current_label] = 0
+
+    if num_closest == -1:
+        return mask_of_all_other_labels
+    else:
+        centroid_current_label = regionprops(mask_of_current_label)[0].centroid
+        centroid_other_labels = regionprops(mask_of_all_other_labels)
+
+        # find the num_closest labels
+        closest_labels = sorted(centroid_other_labels, key=lambda x: np.linalg.norm(np.array(x.centroid) - np.array(centroid_current_label)))[:num_closest]
+        closest_labels = [x.label for x in closest_labels]
+        binary_mask_of_closest_labels = np.isin(mask_of_labels, closest_labels).astype("uint8")
+        mask_of_closest_labels = mask_of_labels.copy()
+        mask_of_closest_labels[binary_mask_of_closest_labels == 0] = 0
+        return mask_of_closest_labels
+
+
+def get_context_features(mask_of_labels, intensity_image, features, extra_properties):
+    properties = regionprops_table(mask_of_labels, intensity_image=intensity_image, properties=features, extra_properties=extra_properties)
+    context_feature_vector = []
+    for feature in properties:
+        context_feature_vector.append(np.mean(properties[feature]))
+        context_feature_vector.append(np.std(properties[feature]))
+    return context_feature_vector
+
+def process_row_of_dataset(row, mask_plane, image_mCherry_plane, image_GFP_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches = None):
+    current_label = row["Label"]
+    mask_of_current_label = (mask_plane == current_label).astype("uint8")
+    features_mCherry = compute_base_label_features(mask_of_current_label, image_mCherry_plane, all_features, extra_properties)
+    features_GFP = compute_base_label_features(mask_of_current_label, image_GFP_plane, intensity_features, extra_intensity_features)
+
+    feature_vector = features_mCherry + features_GFP
+
+    if patches is not None:
+        for patch_size in patches:
+            patch_features_mCherry = compute_patch_features(mask_of_current_label, image_mCherry_plane, patch_size=patch_size)
+            patch_features_GFP = compute_patch_features(mask_of_current_label, image_GFP_plane, patch_size=patch_size)
+            # print(patch_features_mCherry)
+            feature_vector += patch_features_mCherry + patch_features_GFP
+
+    if num_closest is not None:
+        context = get_context(current_label, mask_of_current_label, mask_plane, num_closest=num_closest)
+        context_features_mCherry = get_context_features(context, image_mCherry_plane, all_features, extra_properties)
+        context_features_GFP = get_context_features(context, image_GFP_plane, intensity_features, extra_intensity_features)
+
+        feature_vector += context_features_mCherry + context_features_GFP
+
+    ground_truth = row["Class"]
+    return feature_vector, ground_truth
+
+def compute_features_of_label(current_label, mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None):
+    mask_of_current_label = (mask_plane == current_label).astype("uint8")
+    # check if image_plane has multiple channels
+    if len(image_plane.shape) == 3:
+        # compute all the features on the first channel and then intensity features on the other ones
+        feature_vector = compute_base_label_features(mask_of_current_label, image_plane[0], all_features, extra_properties)
+        for i in range(1, image_plane.shape[0]):
+            intensity_features = compute_base_label_features(mask_of_current_label, image_plane[i], intensity_features, extra_intensity_features)
+            feature_vector += intensity_features
+    else:
+        feature_vector = compute_base_label_features(mask_of_current_label, image_plane, all_features, extra_properties)
+
+    if patches is not None:
+        for patch_size in patches:
+            patch_features = compute_patch_features(mask_of_current_label, image_plane, patch_size=patch_size)
+            feature_vector += patch_features
+
+    if num_closest is not None:
+        context = get_context(current_label, mask_of_current_label, mask_plane, num_closest=num_closest)
+        context_features = get_context_features(context, image_plane, all_features, extra_properties)
+        feature_vector += context_features
+
+    return feature_vector
+
+def compute_features_of_plane(mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None, parallel=True, n_jobs=-1):
+    if parallel:
+        features_of_all_labels = Parallel(n_jobs=n_jobs)(delayed(compute_features_of_label)(current_label, mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches) for current_label in np.unique(mask_plane)[1:])
+    else:
+        features_of_all_labels = [compute_features_of_label(current_label, mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches) for current_label in np.unique(mask_plane)[1:]]
+    return features_of_all_labels
+    
+def predict_plane(mask_plane, image_plane, clf,  all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None, parallel=True, n_jobs=-1):
+    features_of_all_labels = compute_features_of_plane(mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches, parallel=parallel, n_jobs=n_jobs)
+    predictions = clf.predict(features_of_all_labels)
+    return predictions
+
+def compute_features_of_image(mask, image, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None, parallel=True, n_jobs=-1):
+    # check if image is a z-stack
+    if check_if_zstack(image) or len(image.shape) == 4:
+        features_of_all_planes = []
+        for i in range(image.shape[0]):
+            features_of_all_planes.append(compute_features_of_plane(mask[i], image[i], all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches, parallel=parallel, n_jobs=n_jobs))
+    else:
+        features_of_all_planes = compute_features_of_plane(mask, image, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches, parallel=parallel, n_jobs=n_jobs)
+    return features_of_all_planes
+    
 
 def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
     subdir_filemap = file_handling.get_dir_filemap(dir_path)
@@ -343,8 +515,6 @@ class AnnotationTool(QWidget):
                 point = np.array([plane_idx, centroid[0], centroid[1]])
             else:
                 point = np.array([centroid[0], centroid[1]])
-            print(point)
-            print(f'point layer data shape: {self.points_layer.data.shape}')
             self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
 
             # Add the predicted class to the annotation layer
