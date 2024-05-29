@@ -17,6 +17,11 @@ from skimage.feature import graycomatrix, graycoprops
 from skimage.util import img_as_ubyte
 from towbintools.foundation.worm_features import intensity_std, intensity_skew, intensity_kurtosis
 
+from skimage.segmentation import watershed
+from skimage import measure
+from skimage.util import img_as_ubyte
+import cv2
+
 geometrical_features = ('area', 'area_convex', 'equivalent_diameter', 'perimeter', 'eccentricity', 'major_axis_length', 'minor_axis_length', 'solidity', 'extent', 'feret_diameter_max')
 intensity_features = ('intensity_max', 'intensity_min', 'intensity_mean')
 extra_intensity_features = (intensity_std, intensity_skew, intensity_kurtosis)
@@ -77,6 +82,22 @@ def select_file(parent, file_edit):
     else:
         print("File selection cancelled.")
         return ""
+
+def watershed_segmentation(image, markers):
+
+    watersheded = watershed(image, markers=markers)
+
+    regions = measure.regionprops(watersheded)
+    good_regions = [region for region in regions if region.area > 20 and region.area < 300]
+
+    # filter by solidity
+    good_regions = [region for region in good_regions if region.solidity > 0.75]
+
+    filtered = np.zeros_like(watersheded)
+    for region in good_regions:
+        filtered[watersheded == region.label] = region.label
+
+    return filtered
 
 class DataReader(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
@@ -448,7 +469,8 @@ class WatershedAnnotationTool(QWidget):
                         initial_data = np.append(initial_data, np.array([point]), axis=0)
             self.points_layer = self.viewer.add_points(initial_data, name='WatershedAnnotations',
                                                     face_color=np.array((1, 1, 0, 1)),
-                                                    ndim=3 if z_dim else 2)
+                                                    ndim=3 if z_dim else 2,
+                                                    size=2)
             print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
         else:
             self.points_layer = self.viewer.layers['WatershedAnnotations']
@@ -469,4 +491,42 @@ class WatershedAnnotationTool(QWidget):
                 desired_shape = self.viewer.layers[0].data.shape[1:]
             else:
                 desired_shape = self.viewer.layers[0].data.shape
-            watershed_layer = self.viewer.add_labels(np.zeros(desired_shape), name='WatershedSegmentation')
+            watershed_layer = self.viewer.add_labels(np.zeros(desired_shape, dtype=np.uint16), name='WatershedSegmentation')
+
+        img_layer = self.viewer.layers[0]
+        img_data = img_layer.data[0]
+
+        print(img_data.shape)
+
+        # Convert the point layer to a mask where each point is a seed for the watershed algorithm
+        seeds = np.zeros_like(watershed_layer.data)
+        for point in enumerate(self.points_layer.data):
+            seeds[tuple(point)] = 1
+
+        if seeds.ndim == 3:
+            for plane_idx, plane_seeds in enumerate(seeds):
+                # Dilate the seeds enormously to get a good background marker
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (100, 100))
+                dilated_seeds = cv2.morphologyEx(img_as_ubyte(plane_seeds), cv2.MORPH_DILATE, kernel) > 0
+                # Get the inverse of the dilated mask and add it to the original final mask
+                dilated_seeds = 1 - dilated_seeds
+                plane_seeds = plane_seeds + dilated_seeds
+                seeds[plane_idx] = label(plane_seeds)
+        else:
+            # Dilate the seeds enormously to get a good background marker
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (100, 100))
+            dilated_seeds = cv2.morphologyEx(img_as_ubyte(seeds), cv2.MORPH_DILATE, kernel) > 0
+            # Get the inverse of the dilated mask and add it to the original final mask
+            dilated_seeds = 1 - dilated_seeds
+            seeds = seeds + dilated_seeds
+            seeds = label(seeds)
+
+        # Perform the watershed algorithm
+        if img_data.ndim == 3:
+            for plane_idx, plane_img in enumerate(img_data):
+                watershed_markers = seeds[plane_idx]
+                segmented = watershed_segmentation(plane_img, markers=watershed_markers)
+                watershed_layer.data[plane_idx] = segmented
+        else:
+            segmented = watershed_segmentation(img_data, markers=seeds)
+            watershed_layer.data = segmented
