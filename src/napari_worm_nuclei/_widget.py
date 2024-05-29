@@ -88,10 +88,10 @@ def watershed_segmentation(image, markers):
     watersheded = watershed(image, markers=markers)
 
     regions = measure.regionprops(watersheded)
-    good_regions = [region for region in regions if region.area > 20 and region.area < 300]
+    good_regions = [region for region in regions if region.area > 10 and region.area < 400]
 
-    # filter by solidity
-    good_regions = [region for region in good_regions if region.solidity > 0.75]
+    # # filter by solidity
+    # good_regions = [region for region in good_regions if region.solidity > 0.75]
 
     filtered = np.zeros_like(watersheded)
     for region in good_regions:
@@ -516,7 +516,7 @@ class WatershedAnnotationTool(QWidget):
                 seeds[plane_idx] = label(plane_seeds)
         else:
             # Dilate the seeds enormously to get a good background marker
-            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (100, 100))
+            kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (300, 300))
             dilated_seeds = cv2.morphologyEx(img_as_ubyte(seeds), cv2.MORPH_DILATE, kernel) > 0
             # Get the inverse of the dilated mask and add it to the original final mask
             dilated_seeds = 1 - dilated_seeds
