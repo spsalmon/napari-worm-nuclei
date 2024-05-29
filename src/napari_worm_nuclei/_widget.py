@@ -417,7 +417,7 @@ class AnnotationTool(QWidget):
             plane_labels = label_data[0].astype(np.uint8)
             self.predict_on_plane(clf, plane_img, plane_labels)
 
-class WatershedAnnotator(QWidget):
+class WatershedAnnotationTool(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
         super().__init__()
         self.viewer = viewer
@@ -433,9 +433,9 @@ class WatershedAnnotator(QWidget):
         self.start_annotating_button.clicked.connect(self.prepare_annotation_layer)
         self.layout.addWidget(self.start_annotating_button)
 
-        self.watershed_button = QPushButton("Watershed!")
-        self.watershed_button.clicked.connect(self.watershed)
-        self.layout.addWidget(self.watershed_button)
+        # self.watershed_button = QPushButton("Watershed!")
+        # self.watershed_button.clicked.connect(self.watershed)
+        # self.layout.addWidget(self.watershed_button)
 
     def prepare_annotation_layer(self):
         # Check for the last label layer and its dimensions
@@ -474,25 +474,25 @@ class WatershedAnnotator(QWidget):
             self.points_layer = self.viewer.layers['WatershedAnnotations']
             print("Using existing annotation layer.")
 
-    def watershed(self):
+    # def watershed(self):
 
-        if 'WatershedAnnotations' not in [layer.name for layer in self.viewer.layers]:
-            print(f"Please annotate the image before running the watershed algorithm.")
+    #     if 'WatershedAnnotations' not in [layer.name for layer in self.viewer.layers]:
+    #         print(f"Please annotate the image before running the watershed algorithm.")
 
-        # if the watershed layer already exists, clear it
-        if 'WatershedSegmentation' in [layer.name for layer in self.viewer.layers]:
-            watershed_layer = self.viewer.layers['WatershedSegmentation']
-            watershed_layer.data = np.zeros_like(watershed_layer.data)
-        else:
-            watershed_layer = self.viewer.add_labels(np.zeros_like(self.viewer.layers[0].data), name='WatershedSegmentation')
+    #     # if the watershed layer already exists, clear it
+    #     if 'WatershedSegmentation' in [layer.name for layer in self.viewer.layers]:
+    #         watershed_layer = self.viewer.layers['WatershedSegmentation']
+    #         watershed_layer.data = np.zeros_like(watershed_layer.data)
+    #     else:
+    #         watershed_layer = self.viewer.add_labels(np.zeros_like(self.viewer.layers[0].data), name='WatershedSegmentation')
 
-        # If the image is 3D, iterate over each plane
-        if img_data.ndim == 3:
-            for plane_idx, plane_img in enumerate(img_data):
-                # Get the label data for the current plane
-                plane_labels = label_data[plane_idx].astype(np.uint8)
-                self.watershed_on_plane(plane_img, plane_labels, plane_idx)
-        else:
-            plane_img = img_data
-            plane_labels = label_data[0].astype(np.uint8)
-            self.watershed_on_plane(plane_img, plane_labels)
+    #     # If the image is 3D, iterate over each plane
+    #     if img_data.ndim == 3:
+    #         for plane_idx, plane_img in enumerate(img_data):
+    #             # Get the label data for the current plane
+    #             plane_labels = label_data[plane_idx].astype(np.uint8)
+    #             self.watershed_on_plane(plane_img, plane_labels, plane_idx)
+    #     else:
+    #         plane_img = img_data
+    #         plane_labels = label_data[0].astype(np.uint8)
+    #         self.watershed_on_plane(plane_img, plane_labels)
