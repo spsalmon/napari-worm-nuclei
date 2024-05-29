@@ -501,9 +501,10 @@ class WatershedAnnotationTool(QWidget):
         # Convert the point layer to a mask where each point is a seed for the watershed algorithm
         seeds = np.zeros_like(watershed_layer.data)
         for point in enumerate(self.points_layer.data):
-            point = tuple(int(p) for p in point)
-            seeds[point] = 1
-
+            if seeds.ndim == 3:
+                seeds[int(point[0]), int(point[1][1]), int(point[1][2])] = 1
+            else:
+                seeds[int(point[0]), int(point[1])]= 1
         if seeds.ndim == 3:
             for plane_idx, plane_seeds in enumerate(seeds):
                 # Dilate the seeds enormously to get a good background marker
