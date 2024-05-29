@@ -407,7 +407,7 @@ class WatershedAnnotationTool(QWidget):
         # Decrease the margin to make the widget more compact
         self.layout.setContentsMargins(0, 0, 0, 0)
 
-        self.start_annotation_button = QPushButton("Start Annotating")
+        self.start_annotating_button = QPushButton("Start Annotating")
         self.start_annotating_button.clicked.connect(self.prepare_annotation_layer)
         self.layout.addWidget(self.start_annotating_button)
 
