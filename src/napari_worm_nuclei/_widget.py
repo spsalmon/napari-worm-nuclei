@@ -470,7 +470,7 @@ class WatershedAnnotationTool(QWidget):
             self.points_layer = self.viewer.add_points(initial_data, name='WatershedAnnotations',
                                                     face_color=np.array((1, 1, 0, 1)),
                                                     ndim=3 if z_dim else 2,
-                                                    size=2)
+                                                    size=4)
             print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
         else:
             self.points_layer = self.viewer.layers['WatershedAnnotations']
@@ -501,7 +501,8 @@ class WatershedAnnotationTool(QWidget):
         # Convert the point layer to a mask where each point is a seed for the watershed algorithm
         seeds = np.zeros_like(watershed_layer.data)
         for point in enumerate(self.points_layer.data):
-            seeds[tuple(point)] = 1
+            point = tuple(int(p) for p in point)
+            seeds[point] = 1
 
         if seeds.ndim == 3:
             for plane_idx, plane_seeds in enumerate(seeds):
