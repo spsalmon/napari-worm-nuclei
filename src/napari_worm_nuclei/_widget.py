@@ -502,9 +502,9 @@ class WatershedAnnotationTool(QWidget):
         seeds = np.zeros_like(watershed_layer.data)
         for point in enumerate(self.points_layer.data):
             if seeds.ndim == 3:
-                seeds[int(point[0]) -1, int(point[1][1]), int(point[1][2])] = 1
+                seeds[int(point[1][0]), int(point[1][1]), int(point[1][2])] = 1
             else:
-                seeds[int(point[0]), int(point[1])]= 1
+                seeds[int(point[1][0]), int(point[1][1])]= 1
         if seeds.ndim == 3:
             for plane_idx, plane_seeds in enumerate(seeds):
                 # Dilate the seeds enormously to get a good background marker
