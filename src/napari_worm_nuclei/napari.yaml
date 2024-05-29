@@ -8,12 +8,9 @@ contributions:
     - id: napari-worm-nuclei.annotation_tool
       python_name: napari_worm_nuclei._widget:AnnotationTool
       title: Annotation Tool
-    -id: napari-worm-nuclei.watershed_annotation_tool
+    - id: napari-worm-nuclei.watershed_annotation_tool
       python_name: napari_worm_nuclei._widget:WatershedAnnotationTool
       title: Watershed Annotation Tool
-    #- id: napari-annotator.make_func_widget
-    #  python_name: napari_annotator._widget:example_function_widget
-    #  title: Make example function widget
   widgets:
     - command: napari-worm-nuclei.data_reader
       display_name: Data Reader
