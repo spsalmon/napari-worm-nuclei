@@ -447,7 +447,7 @@ class WatershedAnnotationTool(QWidget):
                             point = np.array([centroid[0], centroid[1]])
                         initial_data = np.append(initial_data, np.array([point]), axis=0)
             self.points_layer = self.viewer.add_points(initial_data, name='WatershedAnnotations',
-                                                    face_color=np.array(self.class_colors[self.selected_class]),
+                                                    face_color=np.array((1, 1, 0, 1)),
                                                     ndim=3 if z_dim else 2)
             print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
         else:
