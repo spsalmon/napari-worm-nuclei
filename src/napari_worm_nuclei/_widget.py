@@ -15,34 +15,12 @@ from skimage.measure import regionprops, regionprops_table, label, find_contours
 from scipy.stats import skew, kurtosis
 from skimage.feature import graycomatrix, graycoprops
 from skimage.util import img_as_ubyte
+from towbintools.foundation.worm_features import intensity_std, intensity_skew, intensity_kurtosis
 
 geometrical_features = ('area', 'area_convex', 'equivalent_diameter', 'perimeter', 'eccentricity', 'major_axis_length', 'minor_axis_length', 'solidity', 'extent', 'feret_diameter_max')
 intensity_features = ('intensity_max', 'intensity_min', 'intensity_mean')
 extra_intensity_features = (intensity_std, intensity_skew, intensity_kurtosis)
 
-
-def compute_features_of_plane(mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None, parallel=True, n_jobs=-1):
-    if parallel:
-        features_of_all_labels = Parallel(n_jobs=n_jobs)(delayed(compute_features_of_label)(current_label, mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches) for current_label in np.unique(mask_plane)[1:])
-    else:
-        features_of_all_labels = [compute_features_of_label(current_label, mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches) for current_label in np.unique(mask_plane)[1:]]
-    return features_of_all_labels
-    
-def predict_plane(mask_plane, image_plane, clf,  all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None, parallel=True, n_jobs=-1):
-    features_of_all_labels = compute_features_of_plane(mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches, parallel=parallel, n_jobs=n_jobs)
-    predictions = clf.predict(features_of_all_labels)
-    return predictions
-
-def compute_features_of_image(mask, image, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None, parallel=True, n_jobs=-1):
-    # check if image is a z-stack
-    if check_if_zstack(image) or len(image.shape) == 4:
-        features_of_all_planes = []
-        for i in range(image.shape[0]):
-            features_of_all_planes.append(compute_features_of_plane(mask[i], image[i], all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches, parallel=parallel, n_jobs=n_jobs))
-    else:
-        features_of_all_planes = compute_features_of_plane(mask, image, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=num_closest, patches=patches, parallel=parallel, n_jobs=n_jobs)
-    return features_of_all_planes
-    
 
 def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
     subdir_filemap = file_handling.get_dir_filemap(dir_path)
