@@ -464,4 +464,9 @@ class WatershedAnnotationTool(QWidget):
             watershed_layer = self.viewer.layers['WatershedSegmentation']
             watershed_layer.data = np.zeros_like(watershed_layer.data)
         else:
-            watershed_layer = self.viewer.add_labels(np.zeros_like(self.viewer.layers[0].data), name='WatershedSegmentation')
+            # If the loaded image is 4D, create a 3D label layer
+            if self.viewer.layers[0].data.ndim == 4:
+                desired_shape = self.viewer.layers[0].data.shape[1:]
+            else:
+                desired_shape = self.viewer.layers[0].data.shape
+            watershed_layer = self.viewer.add_labels(np.zeros(desired_shape), name='WatershedSegmentation')
