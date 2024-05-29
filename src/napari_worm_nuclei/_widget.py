@@ -16,151 +16,10 @@ from scipy.stats import skew, kurtosis
 from skimage.feature import graycomatrix, graycoprops
 from skimage.util import img_as_ubyte
 
-def intensity_std(regionmask, intensity_image):
-    return np.std(intensity_image[regionmask])
-
-def intensity_skew(regionmask, intensity_image):
-    return skew(intensity_image[regionmask])
-
-def intensity_kurtosis(regionmask, intensity_image):
-    return kurtosis(intensity_image[regionmask])
-
-def compute_haralick_features(patch):
-    # Calculate the Grey-Level Co-Occurrence Matrix
-    glcm = graycomatrix(img_as_ubyte(patch), distances=[1], angles=[0], levels=256, symmetric=True, normed=True)
-    # Calculate properties
-    contrast = graycoprops(glcm, 'contrast')[0, 0]
-    dissimilarity = graycoprops(glcm, 'dissimilarity')[0, 0]
-    homogeneity = graycoprops(glcm, 'homogeneity')[0, 0]
-    energy = graycoprops(glcm, 'energy')[0, 0]
-    correlation = graycoprops(glcm, 'correlation')[0, 0]
-    
-    return [contrast, dissimilarity, homogeneity, energy, correlation]
-
-
-def compute_patch_features(regionmask, intensity_image, patch_size=64):
-    # Get the centroid of the region
-    centroid = regionprops(regionmask.astype("uint8"))[0].centroid
-    # Create a patch of the defined size around the centroid
-    minr = int(centroid[0] - patch_size/2)
-    maxr = int(centroid[0] + patch_size/2)
-    minc = int(centroid[1] - patch_size/2)
-    maxc = int(centroid[1] + patch_size/2)
-
-    if minr < 0:
-        minr = 0
-        maxr = patch_size
-    if minc < 0:
-        minc = 0
-        maxc = patch_size
-    if maxr >= intensity_image.shape[0]:
-        maxr = intensity_image.shape[0] - 1
-        minr = maxr - patch_size
-    if maxc >= intensity_image.shape[1]:
-        maxc = intensity_image.shape[1] - 1
-        minc = maxc - patch_size
-
-    patch = intensity_image[minr:maxr, minc:maxc]
-
-    patch_basic_intensity_features = [np.max(patch), np.min(patch), np.mean(patch), np.std(patch), skew(patch.ravel()), kurtosis(patch.ravel())]
-    patch_texture_features = compute_haralick_features(patch)
-    # patch_texture_features = []
-    patch_advanced_intensity_features = [shannon_entropy(patch)]
-
-    patch_features = patch_basic_intensity_features + patch_texture_features + patch_advanced_intensity_features
-
-    return patch_features
-
 geometrical_features = ('area', 'area_convex', 'equivalent_diameter', 'perimeter', 'eccentricity', 'major_axis_length', 'minor_axis_length', 'solidity', 'extent', 'feret_diameter_max')
 intensity_features = ('intensity_max', 'intensity_min', 'intensity_mean')
 extra_intensity_features = (intensity_std, intensity_skew, intensity_kurtosis)
-# extra_texture_features = (compute_texture_features,)
 
-all_features = geometrical_features + intensity_features
-extra_properties = extra_intensity_features
-
-def compute_base_label_features(mask_of_label, intensity_image, features, extra_properties):
-    properties = regionprops_table(mask_of_label, intensity_image=intensity_image, properties=features, extra_properties=extra_properties)  
-    feature_vector = []
-    for feature in properties:
-        feature_vector.append(properties[feature][0])
-    return feature_vector
-
-def get_context(current_label, mask_of_current_label, mask_of_labels, num_closest=5):
-    mask_of_all_other_labels = mask_of_labels.copy()
-    mask_of_all_other_labels[mask_of_all_other_labels == current_label] = 0
-
-    if num_closest == -1:
-        return mask_of_all_other_labels
-    else:
-        centroid_current_label = regionprops(mask_of_current_label)[0].centroid
-        centroid_other_labels = regionprops(mask_of_all_other_labels)
-
-        # find the num_closest labels
-        closest_labels = sorted(centroid_other_labels, key=lambda x: np.linalg.norm(np.array(x.centroid) - np.array(centroid_current_label)))[:num_closest]
-        closest_labels = [x.label for x in closest_labels]
-        binary_mask_of_closest_labels = np.isin(mask_of_labels, closest_labels).astype("uint8")
-        mask_of_closest_labels = mask_of_labels.copy()
-        mask_of_closest_labels[binary_mask_of_closest_labels == 0] = 0
-        return mask_of_closest_labels
-
-
-def get_context_features(mask_of_labels, intensity_image, features, extra_properties):
-    properties = regionprops_table(mask_of_labels, intensity_image=intensity_image, properties=features, extra_properties=extra_properties)
-    context_feature_vector = []
-    for feature in properties:
-        context_feature_vector.append(np.mean(properties[feature]))
-        context_feature_vector.append(np.std(properties[feature]))
-    return context_feature_vector
-
-def process_row_of_dataset(row, mask_plane, image_mCherry_plane, image_GFP_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches = None):
-    current_label = row["Label"]
-    mask_of_current_label = (mask_plane == current_label).astype("uint8")
-    features_mCherry = compute_base_label_features(mask_of_current_label, image_mCherry_plane, all_features, extra_properties)
-    features_GFP = compute_base_label_features(mask_of_current_label, image_GFP_plane, intensity_features, extra_intensity_features)
-
-    feature_vector = features_mCherry + features_GFP
-
-    if patches is not None:
-        for patch_size in patches:
-            patch_features_mCherry = compute_patch_features(mask_of_current_label, image_mCherry_plane, patch_size=patch_size)
-            patch_features_GFP = compute_patch_features(mask_of_current_label, image_GFP_plane, patch_size=patch_size)
-            # print(patch_features_mCherry)
-            feature_vector += patch_features_mCherry + patch_features_GFP
-
-    if num_closest is not None:
-        context = get_context(current_label, mask_of_current_label, mask_plane, num_closest=num_closest)
-        context_features_mCherry = get_context_features(context, image_mCherry_plane, all_features, extra_properties)
-        context_features_GFP = get_context_features(context, image_GFP_plane, intensity_features, extra_intensity_features)
-
-        feature_vector += context_features_mCherry + context_features_GFP
-
-    ground_truth = row["Class"]
-    return feature_vector, ground_truth
-
-def compute_features_of_label(current_label, mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None):
-    mask_of_current_label = (mask_plane == current_label).astype("uint8")
-    # check if image_plane has multiple channels
-    if len(image_plane.shape) == 3:
-        # compute all the features on the first channel and then intensity features on the other ones
-        feature_vector = compute_base_label_features(mask_of_current_label, image_plane[0], all_features, extra_properties)
-        for i in range(1, image_plane.shape[0]):
-            intensity_features = compute_base_label_features(mask_of_current_label, image_plane[i], intensity_features, extra_intensity_features)
-            feature_vector += intensity_features
-    else:
-        feature_vector = compute_base_label_features(mask_of_current_label, image_plane, all_features, extra_properties)
-
-    if patches is not None:
-        for patch_size in patches:
-            patch_features = compute_patch_features(mask_of_current_label, image_plane, patch_size=patch_size)
-            feature_vector += patch_features
-
-    if num_closest is not None:
-        context = get_context(current_label, mask_of_current_label, mask_plane, num_closest=num_closest)
-        context_features = get_context_features(context, image_plane, all_features, extra_properties)
-        feature_vector += context_features
-
-    return feature_vector
 
 def compute_features_of_plane(mask_plane, image_plane, all_features, extra_properties, intensity_features, extra_intensity_features, num_closest=None, patches=None, parallel=True, n_jobs=-1):
     if parallel:
@@ -557,3 +416,83 @@ class AnnotationTool(QWidget):
             plane_img = img_data
             plane_labels = label_data[0].astype(np.uint8)
             self.predict_on_plane(clf, plane_img, plane_labels)
+
+class WatershedAnnotator(QWidget):
+    def __init__(self, viewer: "napari.viewer.Viewer"):
+        super().__init__()
+        self.viewer = viewer
+        self.setup_ui()
+
+    def setup_ui(self):
+        self.layout = QVBoxLayout()
+        self.layout.setSpacing(10)
+        # Decrease the margin to make the widget more compact
+        self.layout.setContentsMargins(0, 0, 0, 0)
+
+        self.start_annotation_button = QPushButton("Start Annotating")
+        self.start_annotating_button.clicked.connect(self.prepare_annotation_layer)
+        self.layout.addWidget(self.start_annotating_button)
+
+        self.watershed_button = QPushButton("Watershed!")
+        self.watershed_button.clicked.connect(self.watershed)
+        self.layout.addWidget(self.watershed_button)
+
+    def prepare_annotation_layer(self):
+        # Check for the last label layer and its dimensions
+        label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
+        if label_layers:
+            last_label_layer = label_layers[-1]
+            z_dim = last_label_layer.data.shape[0] if last_label_layer.ndim == 3 else None
+        else:
+            z_dim = None
+            print("No label layers found, defaulting to standard dimensions.")
+
+        # Creates a new point layer or retrieves an existing one
+        if 'WatershedAnnotations' not in [layer.name for layer in self.viewer.layers]:
+            initial_data = np.zeros((0, 3)) if z_dim else np.zeros((0, 2))  # Use ternary operator to set initial_data size
+            # if a label layer exists, add the centroid of each label to the annotation layer
+            if label_layers:
+                label_data = label_layers[-1].data
+                for plane_idx, plane_labels in enumerate(label_data):
+                    for label in np.unique(plane_labels):
+                        if label == 0:
+                            continue
+                        label_mask = (plane_labels == label).astype(np.uint8)
+                        # Get the centroid of the label
+                        centroid = np.mean(np.argwhere(label_mask), axis=0)
+                        # Add the centroid to the annotation layer
+                        if z_dim:
+                            point = np.array([plane_idx, centroid[0], centroid[1]])
+                        else:
+                            point = np.array([centroid[0], centroid[1]])
+                        initial_data = np.append(initial_data, np.array([point]), axis=0)
+            self.points_layer = self.viewer.add_points(initial_data, name='WatershedAnnotations',
+                                                    face_color=np.array(self.class_colors[self.selected_class]),
+                                                    ndim=3 if z_dim else 2)
+            print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
+        else:
+            self.points_layer = self.viewer.layers['WatershedAnnotations']
+            print("Using existing annotation layer.")
+
+    def watershed(self):
+
+        if 'WatershedAnnotations' not in [layer.name for layer in self.viewer.layers]:
+            print(f"Please annotate the image before running the watershed algorithm.")
+
+        # if the watershed layer already exists, clear it
+        if 'WatershedSegmentation' in [layer.name for layer in self.viewer.layers]:
+            watershed_layer = self.viewer.layers['WatershedSegmentation']
+            watershed_layer.data = np.zeros_like(watershed_layer.data)
+        else:
+            watershed_layer = self.viewer.add_labels(np.zeros_like(self.viewer.layers[0].data), name='WatershedSegmentation')
+
+        # If the image is 3D, iterate over each plane
+        if img_data.ndim == 3:
+            for plane_idx, plane_img in enumerate(img_data):
+                # Get the label data for the current plane
+                plane_labels = label_data[plane_idx].astype(np.uint8)
+                self.watershed_on_plane(plane_img, plane_labels, plane_idx)
+        else:
+            plane_img = img_data
+            plane_labels = label_data[0].astype(np.uint8)
+            self.watershed_on_plane(plane_img, plane_labels)
