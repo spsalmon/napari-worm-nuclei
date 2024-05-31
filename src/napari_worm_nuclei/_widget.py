@@ -454,29 +454,13 @@ class WatershedAnnotationTool(QWidget):
             z_dim = None
             print("No label layers found, defaulting to standard dimensions.")
 
-        # Creates a new point layer or retrieves an existing one
+        # Creates a new label layer or retrieves an existing one
         if 'WatershedAnnotations' not in [layer.name for layer in self.viewer.layers]:
-            initial_data = np.zeros((0, 3)) if z_dim else np.zeros((0, 2))  # Use ternary operator to set initial_data size
-            # if a label layer exists, add the centroid of each label to the annotation layer
             if label_layers:
-                label_data = label_layers[-1].data
-                for plane_idx, plane_labels in enumerate(label_data):
-                    for label in np.unique(plane_labels):
-                        if label == 0:
-                            continue
-                        label_mask = (plane_labels == label).astype(np.uint8)
-                        # Get the centroid of the label
-                        centroid = np.mean(np.argwhere(label_mask), axis=0)
-                        # Add the centroid to the annotation layer
-                        if z_dim:
-                            point = np.array([plane_idx, centroid[0], centroid[1]])
-                        else:
-                            point = np.array([centroid[0], centroid[1]])
-                        initial_data = np.append(initial_data, np.array([point]), axis=0)
-            self.points_layer = self.viewer.add_points(initial_data, name='WatershedAnnotations',
-                                                    face_color=np.array((1, 1, 0, 1)),
-                                                    ndim=3 if z_dim else 2,
-                                                    size=4)
+                initial_data = label_layers[-1].data  # Use the last label layer as the initial data
+            else:
+                initial_data = np.zeros_like(self.viewer.layers[0].data[0])  # Use the first plane of the image layer as the initial data
+            self.points_layer = self.viewer.add_points(initial_data, name='WatershedAnnotations', ndim=3 if z_dim else 2)
             print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
         else:
             self.points_layer = self.viewer.layers['WatershedAnnotations']
@@ -504,17 +488,11 @@ class WatershedAnnotationTool(QWidget):
 
         print(img_data.shape)
 
-        # Convert the point layer to a mask where each point is a seed for the watershed algorithm
-        seeds = np.zeros_like(watershed_layer.data)
-        for point in enumerate(self.points_layer.data):
-            if seeds.ndim == 3:
-                seeds[int(point[1][0]), int(point[1][1]), int(point[1][2])] = 1
-            else:
-                seeds[int(point[1][0]), int(point[1][1])]= 1
+        seeds = label(self.viewer.layers['WatershedAnnotations'].data)
         if seeds.ndim == 3:
             for plane_idx, plane_seeds in enumerate(seeds):
                 # Dilate the seeds enormously to get a good background marker
-                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (100, 100))
+                kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (300, 300))
                 dilated_seeds = cv2.morphologyEx(img_as_ubyte(plane_seeds), cv2.MORPH_DILATE, kernel) > 0
                 # Get the inverse of the dilated mask and add it to the original final mask
                 dilated_seeds = 1 - dilated_seeds
