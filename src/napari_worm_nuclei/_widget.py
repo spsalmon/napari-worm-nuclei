@@ -436,6 +436,12 @@ class WatershedAnnotationTool(QWidget):
         self.watershed_button.clicked.connect(self.watershed)
         self.layout.addWidget(self.watershed_button)
 
+        self.save_dir_edit, self.save_dir_button = create_dir_selector(self, self.layout, "Select Save Directory")
+
+        self.save_button = QPushButton("Save")
+        self.save_button.clicked.connect(self.save_annotations)
+        self.layout.addWidget(self.save_button)
+
         self.setLayout(self.layout)
 
     def prepare_annotation_layer(self):
@@ -532,3 +538,21 @@ class WatershedAnnotationTool(QWidget):
         else:
             segmented = watershed_segmentation(img_data, markers=seeds)
             watershed_layer.data = segmented
+
+    def save_annotations(self):
+        """Save the watershed annotations as a label mask"""
+
+        if 'WatershedSegmentation' not in [layer.name for layer in self.viewer.layers]:
+            print("No watershed segmentation to save.")
+            return
+
+        save_dir = self.save_dir_edit.text()
+        if not save_dir:
+            print("Please select a save directory.")
+            return
+
+        # Get the name of the image layer
+        save_name = self.viewer.layers[0].name
+        save_name = f'{save_name}.tiff'
+        save_path = os.path.join(save_dir, save_name)
+        tifffile.imsave(save_path, self.viewer.layers['WatershedSegmentation'].data, compression='zlib')
