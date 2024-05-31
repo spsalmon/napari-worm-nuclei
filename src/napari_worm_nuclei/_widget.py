@@ -460,10 +460,10 @@ class WatershedAnnotationTool(QWidget):
                 initial_data = label_layers[-1].data  # Use the last label layer as the initial data
             else:
                 initial_data = np.zeros_like(self.viewer.layers[0].data[0])  # Use the first plane of the image layer as the initial data
-            self.points_layer = self.viewer.add_points(initial_data, name='WatershedAnnotations', ndim=3 if z_dim else 2)
+            self.annotation_layer = self.viewer.add_labels(initial_data, name='WatershedAnnotations')
             print(f"Annotation layer added with {'3D' if z_dim else '2D'} capabilities.")
         else:
-            self.points_layer = self.viewer.layers['WatershedAnnotations']
+            self.annotation_layer = self.viewer.layers['WatershedAnnotations']
             print("Using existing annotation layer.")
 
     def watershed(self):
