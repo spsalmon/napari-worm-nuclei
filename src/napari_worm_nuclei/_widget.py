@@ -21,10 +21,8 @@ from skimage.segmentation import watershed
 from skimage import measure
 from skimage.util import img_as_ubyte
 import cv2
-
-geometrical_features = ('area', 'area_convex', 'equivalent_diameter', 'perimeter', 'eccentricity', 'major_axis_length', 'minor_axis_length', 'solidity', 'extent', 'feret_diameter_max')
-intensity_features = ('intensity_max', 'intensity_min', 'intensity_mean')
-extra_intensity_features = (intensity_std, intensity_skew, intensity_kurtosis)
+from towbintools.classification.classification_tools import classify_labels_and_convert_to_dataframe_features_dict
+import joblib
 
 
 def add_dir_to_experiment_filemap(experiment_filemap, dir_path, subdir_name):
@@ -261,6 +259,7 @@ class AnnotationTool(QWidget):
         self.layout.addWidget(self.save_button)
 
         self.model_file_edit, self.model_file_button = create_file_selector(self, self.layout, "Select Model File")
+        self.feature_pickle_edit, self.feature_pickle_button = create_file_selector(self, self.layout, "Select Feature Pickle File")
 
         self.predict_button = QPushButton("Predict")
         self.predict_button.clicked.connect(self.predict)
@@ -345,38 +344,59 @@ class AnnotationTool(QWidget):
 
         annotation_dataframe.to_csv(save_path, index=False)
 
-    def predict_on_plane(self, clf, plane_img, plane_labels, plane_idx = None):
-        feature_of_all_labels = regionprops_table(plane_labels, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
-        mean_features_plane = []
-        for key in feature_of_all_labels:
-            mean_features_plane.append(np.mean(feature_of_all_labels[key]))
+    # def predict_on_plane(self, clf, plane_img, plane_labels, plane_idx = None):
+    #     feature_of_all_labels = regionprops_table(plane_labels, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
+    #     mean_features_plane = []
+    #     for key in feature_of_all_labels:
+    #         mean_features_plane.append(np.mean(feature_of_all_labels[key]))
 
-        # Predict the class of each label
-        for label in np.unique(plane_labels):
-            if label == 0:
-                continue
-            label_mask = (plane_labels == label).astype(np.uint8)
-            features_of_label = regionprops_table(label_mask, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
-            feature = []
-            for key in features_of_label:
-                feature.extend(features_of_label[key])
+    #     # # Predict the class of each label
+    #     # for label in np.unique(plane_labels):
+    #     #     if label == 0:
+    #     #         continue
+    #     #     label_mask = (plane_labels == label).astype(np.uint8)
+    #     #     features_of_label = regionprops_table(label_mask, intensity_image= plane_img, properties=('area', 'area_convex', 'equivalent_diameter', 'major_axis_length', 'minor_axis_length', 'eccentricity', 'extent', 'feret_diameter_max', 'solidity', 'perimeter', 'intensity_max', 'intensity_mean', 'intensity_min', 'weighted_moments_hu'))
+    #     #     feature = []
+    #     #     for key in features_of_label:
+    #     #         feature.extend(features_of_label[key])
 
-            # concatenate the features of the label with the mean features of all labels
-            feature_vector = np.concatenate((feature, mean_features_plane))
-            feature_vector = feature_vector.reshape(1, -1)
-            prediction = clf.predict(feature_vector)[0]
+    #     #     # concatenate the features of the label with the mean features of all labels
+    #     #     feature_vector = np.concatenate((feature, mean_features_plane))
+    #     #     feature_vector = feature_vector.reshape(1, -1)
+    #     #     prediction = clf.predict(feature_vector)[0]
 
-            # Get the centroid of the label
+    #     # Predict the class of each label
+
+
+    #         # Get the centroid of the label
+    #         centroid = np.mean(np.argwhere(label_mask), axis=0)
+    #         # Add the centroid to the annotation layer
+    #         if plane_idx is not None:
+    #             point = np.array([plane_idx, centroid[0], centroid[1]])
+    #         else:
+    #             point = np.array([centroid[0], centroid[1]])
+    #         self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
+
+    #         # Add the predicted class to the annotation layer
+    #         self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
+
+    def convert_classification_to_centroids(self, classification_df, label_data):
+        centroids = []
+        max_plane = classification_df['Plane'].max()
+        for idx, row in classification_df.iterrows():
+            label = row['Label']
+            plane = row['Plane']
+            label_mask = (label_data[plane] == label).astype(np.uint8)
             centroid = np.mean(np.argwhere(label_mask), axis=0)
-            # Add the centroid to the annotation layer
-            if plane_idx is not None:
-                point = np.array([plane_idx, centroid[0], centroid[1]])
+            centroids.append(centroid)
+
+            if max_plane > 0:
+                point = np.array([plane, centroid[0], centroid[1]])
             else:
                 point = np.array([centroid[0], centroid[1]])
-            self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
 
-            # Add the predicted class to the annotation layer
-            self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
+            self.points_layer.data = np.append(self.points_layer.data, np.array([point]), axis=0)
+            self.points_layer.face_color[-1] = np.array(self.class_values_to_color[row['Class']]).astype(float)
 
     def predict(self):
         # Load the XGB model
@@ -387,6 +407,14 @@ class AnnotationTool(QWidget):
 
         clf = xgb.XGBClassifier()
         clf.load_model(model_path)
+
+        # Load the feature pickle file
+        feature_pickle_path = self.feature_pickle_edit.text()
+        if not feature_pickle_path:
+            print("Please select a feature pickle file.")
+            return
+        feature_dict = joblib.load(feature_pickle_path)
+
 
         label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
         if not label_layers:
@@ -405,16 +433,20 @@ class AnnotationTool(QWidget):
         if 'Annotations' not in [layer.name for layer in self.viewer.layers]:
             self.prepare_annotation_layer()
 
-        # If the image is 3D, iterate over each plane
-        if img_data.ndim == 3:
-            for plane_idx, plane_img in enumerate(img_data):
-                # Get the label data for the current plane
-                plane_labels = label_data[plane_idx].astype(np.uint8)
-                self.predict_on_plane(clf, plane_img, plane_labels, plane_idx)
-        else:
-            plane_img = img_data
-            plane_labels = label_data[0].astype(np.uint8)
-            self.predict_on_plane(clf, plane_img, plane_labels)
+        # # If the image is 3D, iterate over each plane
+        # if img_data.ndim == 3:
+        #     for plane_idx, plane_img in enumerate(img_data):
+        #         # Get the label data for the current plane
+        #         plane_labels = label_data[plane_idx].astype(np.uint8)
+        #         self.predict_on_plane(clf, plane_img, plane_labels, plane_idx)
+        # else:
+        #     plane_img = img_data
+        #     plane_labels = label_data[0].astype(np.uint8)
+        #     self.predict_on_plane(clf, plane_img, plane_labels)
+
+        classification = classify_labels_and_convert_to_dataframe_features_dict(label_data, img_data, clf, feature_dict, parallel=True, n_jobs=-1, is_zstack=True, confidence_threshold=None)
+        self.convert_classification_to_centroids(classification, label_data)
+
 
 class WatershedAnnotationTool(QWidget):
     def __init__(self, viewer: "napari.viewer.Viewer"):
