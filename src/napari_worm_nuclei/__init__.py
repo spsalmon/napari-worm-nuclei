@@ -1,9 +1,9 @@
 __version__ = "0.0.1"
 
-from ._reader import napari_get_reader
-from ._widget import DataReader
-from ._writer import write_multiple, write_single_image
+from ._widget import DataReader, AnnotationTool, WatershedAnnotationTool
 
 __all__ = (
     "DataReader",
+    "AnnotationTool",
+    "WatershedAnnotationTool",
 )
