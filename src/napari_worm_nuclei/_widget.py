@@ -265,7 +265,7 @@ class AnnotationTool(QWidget):
         self.predict_button.clicked.connect(self.predict)
         self.layout.addWidget(self.predict_button)
 
-        self.annotation_file_edit, self.annotation_file_button = create_file_selector(self, self.layout, "Load Annotation")
+        self.annotation_file_edit, self.annotation_file_button = create_file_selector(self, self.layout, "Select Annotation File")
         self.load_annotation_button = QPushButton("Load Annotation")
         self.load_annotation_button.clicked.connect(self.load_annotation)
         self.layout.addWidget(self.load_annotation_button)
@@ -471,6 +471,8 @@ class AnnotationTool(QWidget):
 
         # convert the label column to int
         annotation_df['Label'] = annotation_df['Label'].astype(int)
+        # convert the plane column to int
+        annotation_df['Plane'] = annotation_df['Plane'].astype(int)
 
         self.prepare_annotation_layer()
         self.convert_classification_to_centroids(annotation_df, self.viewer.layers[-1].data)
