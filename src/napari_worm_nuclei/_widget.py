@@ -392,7 +392,7 @@ class AnnotationTool(QWidget):
         for idx, row in classification_df.iterrows():
             label = row['Label']
             plane = row['Plane']
-            label_mask = (label_data[plane] == label).astype(np.uint8)
+            label_mask = (label_data[int(plane)] == label).astype(np.uint8)
             centroid = np.mean(np.argwhere(label_mask), axis=0)
             centroids.append(centroid)
 
