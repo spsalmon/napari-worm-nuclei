@@ -460,6 +460,18 @@ class AnnotationTool(QWidget):
             return
 
         annotation_df = pd.read_csv(annotation_path)
+
+        # if the columns are without a capital letter, convert them to the correct format
+        if 'plane' in annotation_df.columns:
+            annotation_df.rename(columns={'plane': 'Plane'}, inplace=True)
+        if 'label' in annotation_df.columns:
+            annotation_df.rename(columns={'label': 'Label'}, inplace=True)
+        if 'class' in annotation_df.columns:
+            annotation_df.rename(columns={'class': 'Class'}, inplace=True)
+
+        # convert the label column to int
+        annotation_df['Label'] = annotation_df['Label'].astype(int)
+
         self.prepare_annotation_layer()
         self.convert_classification_to_centroids(annotation_df, self.viewer.layers[-1].data)
 
