@@ -387,6 +387,7 @@ class AnnotationTool(QWidget):
     #         self.points_layer.face_color[-1] = np.array(self.class_values_to_color[prediction]).astype(float)
 
     def convert_classification_to_centroids(self, classification_df, label_data):
+        print(f'Label data shape: {label_data.shape}')
         centroids = []
         max_plane = classification_df['Plane'].max()
         for idx, row in classification_df.iterrows():
@@ -475,7 +476,16 @@ class AnnotationTool(QWidget):
         annotation_df['Plane'] = annotation_df['Plane'].astype(int)
 
         self.prepare_annotation_layer()
-        self.convert_classification_to_centroids(annotation_df, self.viewer.layers[-1].data)
+
+        label_layers = [layer for layer in self.viewer.layers if isinstance(layer, napari.layers.Labels)]
+        if not label_layers:
+            print("No label layer found.")
+            return
+
+        base_label_layer = label_layers[-1]
+        label_data = base_label_layer.data
+
+        self.convert_classification_to_centroids(annotation_df, label_data)
 
 
 class WatershedAnnotationTool(QWidget):
