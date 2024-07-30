@@ -265,6 +265,12 @@ class AnnotationTool(QWidget):
         self.predict_button.clicked.connect(self.predict)
         self.layout.addWidget(self.predict_button)
 
+        self.annotation_file_edit, self.annotation_file_button = create_file_selector(self, self.layout, "Load Annotation")
+        self.load_annotation_button = QPushButton("Load Annotation")
+        self.load_annotation_button.clicked.connect(self.load_annotation)
+        self.layout.addWidget(self.load_annotation_button)
+
+
         self.setLayout(self.layout)
 
     def on_class_selected(self, checked):
@@ -446,6 +452,16 @@ class AnnotationTool(QWidget):
 
         classification = classify_labels_and_convert_to_dataframe_features_dict(label_data, img_data, clf, feature_dict, parallel=True, n_jobs=-1, is_zstack=True, confidence_threshold=None)
         self.convert_classification_to_centroids(classification, label_data)
+
+    def load_annotation(self):
+        annotation_path = self.annotation_file_edit.text()
+        if not annotation_path:
+            print("Please select an annotation file.")
+            return
+
+        annotation_df = pd.read_csv(annotation_path)
+        self.prepare_annotation_layer()
+        self.convert_classification_to_centroids(annotation_df, self.viewer.layers[-1].data)
 
 
 class WatershedAnnotationTool(QWidget):
